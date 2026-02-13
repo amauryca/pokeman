@@ -49,7 +49,7 @@ const Index = () => {
                     Browse Products <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="border-primary-foreground/30 !text-primary-foreground hover:bg-primary-foreground/10">
+                <Button asChild size="lg" variant="outline" className="border-foreground bg-foreground !text-background hover:bg-primary hover:border-primary hover:!text-primary-foreground">
                   <Link to="/order">Contact Me</Link>
                 </Button>
               </div>
