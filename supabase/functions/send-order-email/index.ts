@@ -16,28 +16,43 @@ serve(async (req) => {
 
     const productList = products
       .map((p: { name: string; quantity: number }) => `• ${p.name} (x${p.quantity})`)
-      .join("\n");
+      .join("<br/>");
 
-    const emailBody = `
-New Order Request from PokéMarket!
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    if (!RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY is not configured");
+    }
 
-Customer: ${customer_name}
-Email: ${email}
-Phone: ${phone || "Not provided"}
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "PokéMarket <onboarding@resend.dev>",
+        to: ["amaurycacevedo@gmail.com"],
+        subject: `New Order Request from ${customer_name}`,
+        html: `
+          <h2>New Order Request from PokéMarket!</h2>
+          <p><strong>Customer:</strong> ${customer_name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
+          <h3>Products Requested:</h3>
+          <p>${productList}</p>
+          <p><strong>Notes:</strong> ${notes || "None"}</p>
+          <hr/>
+          <p><em>Sent automatically from PokéMarket</em></p>
+        `,
+      }),
+    });
 
-Products Requested:
-${productList}
+    const data = await res.json();
 
-Notes: ${notes || "None"}
-
----
-Sent automatically from PokéMarket
-    `.trim();
-
-    // Use Supabase's built-in email or a simple SMTP approach
-    // For now, log the order (email sending requires SMTP setup)
-    console.log("Order email would be sent to amaurycacevedo@gmail.com");
-    console.log(emailBody);
+    if (!res.ok) {
+      console.error("Resend error:", data);
+      throw new Error(data.message || "Failed to send email");
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
