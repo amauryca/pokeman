@@ -29,33 +29,37 @@ const getStatusBadge = (product: Product) => {
   return <Badge variant="secondary">In Stock ({product.quantity})</Badge>;
 };
 
-const getImageUrl = (name: string, imageUrl: string | null) => {
-  if (imageUrl) return imageUrl;
-  // Fallback to Pokemon TCG API-style placeholder
-  const encoded = encodeURIComponent(name.split(" ")[0]);
-  return `https://images.pokemontcg.io/base1/${Math.floor(Math.random() * 102) + 1}_hires.png`;
-};
-
 const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   const isSoldOut = product.status === "sold" || product.quantity === 0;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.3 }}
+      layout
+      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.9, y: -10 }}
+      transition={{ delay: index * 0.04, duration: 0.35, type: "spring", stiffness: 300, damping: 25 }}
     >
-      <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
+      <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
         <div className="relative aspect-square bg-muted overflow-hidden">
           <img
             src={product.image_url || "/placeholder.svg"}
             alt={product.name}
-            className={`w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-105 ${
+            className={`w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-110 ${
               isSoldOut ? "opacity-50 grayscale" : ""
             }`}
             loading="lazy"
           />
           <div className="absolute top-3 right-3">{getStatusBadge(product)}</div>
+
+          {/* Hover reveal overlay */}
+          <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out bg-gradient-to-t from-foreground/90 via-foreground/60 to-transparent p-4 pt-10">
+            <p className="text-background text-sm font-medium font-heading">{product.name}</p>
+            <p className="text-background/70 text-xs mt-1">{product.category}</p>
+            <p className="text-primary-foreground text-lg font-bold mt-1 text-primary drop-shadow-sm">
+              ${product.price.toFixed(2)}
+            </p>
+          </div>
         </div>
         <CardContent className="p-4 space-y-3">
           <div>
