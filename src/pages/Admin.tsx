@@ -5,6 +5,7 @@ import { useProducts, type Product } from "@/hooks/useProducts";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,8 +13,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus } from "lucide-react";
+import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
+import MultiImageUpload from "@/components/MultiImageUpload";
 
 const categories = [
   "Booster Packs",
@@ -42,8 +44,12 @@ const Admin = () => {
   const [newPrice, setNewPrice] = useState("");
   const [newQty, setNewQty] = useState("");
   const [newCategory, setNewCategory] = useState("Trading Cards");
+  const [newDescription, setNewDescription] = useState("");
   const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
+  const [newGalleryImages, setNewGalleryImages] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [galleryDialogProduct, setGalleryDialogProduct] = useState<Product | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -98,22 +104,47 @@ const Admin = () => {
   // Mutations
   const addProduct = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("products").insert({
+      const { data, error } = await supabase.from("products").insert({
         name: newName,
         price: parseFloat(newPrice),
         quantity: parseInt(newQty),
         category: newCategory,
+        description: newDescription || null,
         image_url: newImageUrl,
-      });
+      }).select().single();
       if (error) throw error;
+      if (newGalleryImages.length > 0) {
+        const { error: imgError } = await supabase.from("product_images").insert(
+          newGalleryImages.map((url, i) => ({ product_id: data.id, image_url: url, sort_order: i }))
+        );
+        if (imgError) throw imgError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      setNewName(""); setNewPrice(""); setNewQty(""); setNewImageUrl(null);
+      setNewName(""); setNewPrice(""); setNewQty(""); setNewImageUrl(null); setNewDescription(""); setNewGalleryImages([]);
       setDialogOpen(false);
       toast({ title: "Product added!" });
     },
     onError: () => toast({ title: "Failed to add product", variant: "destructive" }),
+  });
+
+  const saveGalleryImages = useMutation({
+    mutationFn: async ({ productId, images }: { productId: string; images: string[] }) => {
+      await supabase.from("product_images").delete().eq("product_id", productId);
+      if (images.length > 0) {
+        const { error } = await supabase.from("product_images").insert(
+          images.map((url, i) => ({ product_id: productId, image_url: url, sort_order: i }))
+        );
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      setGalleryDialogProduct(null);
+      toast({ title: "Gallery updated!" });
+    },
+    onError: () => toast({ title: "Failed to update gallery", variant: "destructive" }),
   });
 
   const updateProduct = useMutation({
@@ -204,8 +235,9 @@ const Admin = () => {
                   <DialogHeader>
                     <DialogTitle>Add New Product</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
                     <Input placeholder="Product name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                    <Textarea placeholder="Description (optional)" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} rows={3} />
                     <Input type="number" placeholder="Price" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} />
                     <Input type="number" placeholder="Quantity" value={newQty} onChange={(e) => setNewQty(e.target.value)} />
                     <Select value={newCategory} onValueChange={setNewCategory}>
@@ -214,7 +246,14 @@ const Admin = () => {
                         {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <ImageUpload value={newImageUrl} onChange={setNewImageUrl} />
+                    <div>
+                      <p className="text-sm font-medium mb-1">Main Image</p>
+                      <ImageUpload value={newImageUrl} onChange={setNewImageUrl} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium mb-1">Gallery Images</p>
+                      <MultiImageUpload images={newGalleryImages} onChange={setNewGalleryImages} />
+                    </div>
                     <Button className="w-full" onClick={() => addProduct.mutate()} disabled={!newName || !newPrice || !newQty}>
                       Add Product
                     </Button>
@@ -308,14 +347,28 @@ const Admin = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive"
-                            onClick={() => deleteProduct.mutate(p.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Manage gallery"
+                              onClick={() => {
+                                setGalleryDialogProduct(p);
+                                setGalleryImages(p.product_images?.map(img => img.image_url) || []);
+                              }}
+                            >
+                              <Images className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => deleteProduct.mutate(p.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -377,6 +430,44 @@ const Admin = () => {
           </Card>
         )}
       </div>
+
+      {/* Gallery Management Dialog */}
+      <Dialog open={!!galleryDialogProduct} onOpenChange={(open) => { if (!open) setGalleryDialogProduct(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gallery — {galleryDialogProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium mb-1">Description</p>
+              <Textarea
+                defaultValue={galleryDialogProduct?.description || ""}
+                placeholder="Add a description..."
+                rows={3}
+                onBlur={(e) => {
+                  if (galleryDialogProduct) {
+                    updateProduct.mutate({ id: galleryDialogProduct.id, description: e.target.value || null });
+                  }
+                }}
+              />
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-1">Gallery Images</p>
+              <MultiImageUpload images={galleryImages} onChange={setGalleryImages} />
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => {
+                if (galleryDialogProduct) {
+                  saveGalleryImages.mutate({ productId: galleryDialogProduct.id, images: galleryImages });
+                }
+              }}
+            >
+              Save Gallery
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

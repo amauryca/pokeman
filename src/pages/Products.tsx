@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
-import { useProducts } from "@/hooks/useProducts";
+import ProductDetailDialog from "@/components/ProductDetailDialog";
+import { useProducts, type Product } from "@/hooks/useProducts";
 
 const categories = [
   "All",
@@ -28,6 +29,7 @@ const Products = () => {
   const { data: products, isLoading } = useProducts();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const filtered = useMemo(() => {
     if (!products) return [];
@@ -97,12 +99,18 @@ const Products = () => {
           >
             <AnimatePresence mode="popLayout">
               {filtered.map((product, i) => (
-                <ProductCard key={product.id} product={product} index={i} />
+                <ProductCard key={product.id} product={product} index={i} onViewDetail={setSelectedProduct} />
               ))}
             </AnimatePresence>
           </motion.div>
         )}
       </main>
+
+      <ProductDetailDialog
+        product={selectedProduct}
+        open={!!selectedProduct}
+        onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}
+      />
     </>
   );
 };
