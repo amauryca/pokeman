@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet, FileText, X } from "lucide-react";
+import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet, FileText, X, Wand2, Loader2 } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import MultiImageUpload from "@/components/MultiImageUpload";
 import ExcelUpload from "@/components/ExcelUpload";
@@ -53,7 +53,7 @@ const Admin = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [galleryDialogProduct, setGalleryDialogProduct] = useState<Product | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
-
+  const [fetchingImages, setFetchingImages] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   // Auth + admin role check
@@ -212,6 +212,30 @@ const Admin = () => {
     navigate("/admin/login");
   };
 
+  const handleFetchMissingImages = async () => {
+    const missing = products?.filter(p => !p.image_url) ?? [];
+    if (missing.length === 0) {
+      toast({ title: "All products already have images!" });
+      return;
+    }
+    setFetchingImages(true);
+    let updated = 0;
+    for (const p of missing) {
+      try {
+        const { data } = await supabase.functions.invoke("fetch-product-image", {
+          body: { name: p.name, category: p.category },
+        });
+        if (data?.image_url) {
+          await supabase.from("products").update({ image_url: data.image_url }).eq("id", p.id);
+          updated++;
+        }
+      } catch { /* best effort */ }
+    }
+    queryClient.invalidateQueries({ queryKey: ["products"] });
+    toast({ title: `Fetched images for ${updated} of ${missing.length} product(s)` });
+    setFetchingImages(false);
+  };
+
   if (!isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -327,6 +351,18 @@ const Admin = () => {
                     />
                   </DialogContent>
                 </Dialog>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleFetchMissingImages}
+                  disabled={fetchingImages || !products?.some(p => !p.image_url)}
+                >
+                  {fetchingImages ? (
+                    <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Fetching...</>
+                  ) : (
+                    <><Wand2 className="h-4 w-4 mr-1" /> Fetch Missing Images</>
+                  )}
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
