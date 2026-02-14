@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet } from "lucide-react";
+import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet, X } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import MultiImageUpload from "@/components/MultiImageUpload";
 import ExcelUpload from "@/components/ExcelUpload";
@@ -320,10 +320,16 @@ const Admin = () => {
                         <TableCell>
                           <div className="relative w-12 h-12 rounded overflow-hidden bg-muted flex-shrink-0">
                             {p.image_url ? (
-                              <>
+                              <div className="group relative w-full h-full">
                                 <img src={p.image_url} alt={p.name} className="w-full h-full object-contain" />
-                                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-primary border border-background" title="Image set" />
-                              </>
+                                <button
+                                  onClick={() => updateProduct.mutate({ id: p.id, image_url: null })}
+                                  className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-destructive text-destructive-foreground"
+                                  title="Remove image"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
                             ) : (
                               <label className="w-full h-full flex items-center justify-center cursor-pointer text-destructive hover:text-foreground transition-colors" title="No image — click to upload">
                                 <ImagePlus className="h-4 w-4" />
