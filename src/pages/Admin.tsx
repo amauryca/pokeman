@@ -45,13 +45,39 @@ const Admin = () => {
   const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Auth check
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  // Auth + admin role check
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) navigate("/admin/login");
-    });
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/admin/login");
+        return;
+      }
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .single();
+
+      if (!roles) {
+        toast({ title: "Access denied", description: "Admin privileges required", variant: "destructive" });
+        navigate("/");
+        return;
+      }
+      setIsAuthorized(true);
+    };
+
+    checkAdmin();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (!session) navigate("/admin/login");
+      if (!session) {
+        setIsAuthorized(false);
+        navigate("/admin/login");
+      }
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
@@ -123,6 +149,14 @@ const Admin = () => {
     await supabase.auth.signOut();
     navigate("/admin/login");
   };
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Checking admin access...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
