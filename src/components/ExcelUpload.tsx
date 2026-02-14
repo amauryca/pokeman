@@ -16,15 +16,13 @@ interface ExcelProduct {
   autoImage: boolean;
 }
 
-const POKEMON_TCG_API = "https://api.pokemontcg.io/v2/cards";
-
-async function fetchPokemonImage(productName: string): Promise<string | null> {
+async function fetchProductImage(name: string, category: string): Promise<string | null> {
   try {
-    const searchName = productName.replace(/[^a-zA-Z0-9 ]/g, "").trim();
-    const res = await fetch(`${POKEMON_TCG_API}?q=name:"${encodeURIComponent(searchName)}"&pageSize=1`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.data?.[0]?.images?.large || data.data?.[0]?.images?.small || null;
+    const { data, error } = await supabase.functions.invoke("fetch-product-image", {
+      body: { name, category },
+    });
+    if (error) return null;
+    return data?.image_url || null;
   } catch {
     return null;
   }
@@ -99,7 +97,7 @@ const ExcelUpload = ({ existingProducts, onComplete }: Props) => {
         const status = item.quantity <= 0 ? "sold" : "available";
 
         // Try to auto-fetch image only if toggle is on
-        const imageUrl = item.autoImage ? await fetchPokemonImage(item.name) : null;
+        const imageUrl = item.autoImage ? await fetchProductImage(item.name, item.category) : null;
 
         const { error } = await supabase.from("products").insert({
           name: item.name,
