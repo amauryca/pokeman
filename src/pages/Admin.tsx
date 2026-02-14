@@ -15,7 +15,21 @@ import { toast } from "@/hooks/use-toast";
 import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 
-const categories = ["Trading Cards", "Booster Boxes", "Elite Trainer Boxes"];
+const categories = [
+  "Booster Packs",
+  "Booster Boxes",
+  "Booster Bundles",
+  "Elite Trainer Boxes",
+  "Ultra Premium Collections",
+  "Collection Boxes",
+  "Tins",
+  "Blisters",
+  "Build & Battle Boxes",
+  "Trainer Kits",
+  "Special Sets",
+  "Single Cards",
+  "Accessories",
+];
 
 const Admin = () => {
   const navigate = useNavigate();

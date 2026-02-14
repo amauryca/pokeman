@@ -7,7 +7,22 @@ import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
 import { useProducts } from "@/hooks/useProducts";
 
-const categories = ["All", "Trading Cards", "Booster Boxes", "Elite Trainer Boxes"];
+const categories = [
+  "All",
+  "Booster Packs",
+  "Booster Boxes",
+  "Booster Bundles",
+  "Elite Trainer Boxes",
+  "Ultra Premium Collections",
+  "Collection Boxes",
+  "Tins",
+  "Blisters",
+  "Build & Battle Boxes",
+  "Trainer Kits",
+  "Special Sets",
+  "Single Cards",
+  "Accessories",
+];
 
 const Products = () => {
   const { data: products, isLoading } = useProducts();
