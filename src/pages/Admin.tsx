@@ -13,9 +13,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images } from "lucide-react";
+import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import MultiImageUpload from "@/components/MultiImageUpload";
+import ExcelUpload from "@/components/ExcelUpload";
 
 const categories = [
   "Booster Packs",
@@ -152,8 +153,25 @@ const Admin = () => {
       const { id, ...rest } = updates;
       const { error } = await supabase.from("products").update(rest).eq("id", id);
       if (error) throw error;
+      return { id, ...rest };
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["products"] }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      // Send stock notification for quantity/status changes
+      if (data && ("quantity" in data || "status" in data)) {
+        const product = products?.find((p) => p.id === data.id);
+        if (product) {
+          const qty = data.quantity ?? product.quantity;
+          const status = data.status ?? product.status;
+          supabase.functions.invoke("stock-change-notification", {
+            body: {
+              changes: [{ name: product.name, price: product.price, quantity: qty, status }],
+              type: "stock_update",
+            },
+          }).catch(() => {});
+        }
+      }
+    },
     onError: () => toast({ title: "Update failed", variant: "destructive" }),
   });
 
@@ -227,10 +245,11 @@ const Admin = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="font-heading">Products ({products?.length ?? 0})</CardTitle>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Product</Button>
-                </DialogTrigger>
+              <div className="flex items-center gap-2">
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Product</Button>
+                  </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Add New Product</DialogTitle>
@@ -259,7 +278,26 @@ const Admin = () => {
                     </Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline"><FileSpreadsheet className="h-4 w-4 mr-1" /> Excel Upload</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Import Products from Excel</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Upload an Excel or CSV file with columns: <strong>Name, Price, Quantity, Category, Description</strong>.
+                      Duplicates (matching by name) will be skipped automatically.
+                    </p>
+                    <ExcelUpload
+                      existingProducts={products ?? []}
+                      onComplete={() => queryClient.invalidateQueries({ queryKey: ["products"] })}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
