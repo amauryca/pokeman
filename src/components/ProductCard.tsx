@@ -23,6 +23,7 @@ const getStatusBadge = (product: Product) => {
 
 const ProductCard = ({ product, index = 0, onViewDetail }: ProductCardProps) => {
   const isSoldOut = product.status === "sold" || product.quantity === 0;
+  const displayImage = product.image_url || product.product_images?.[0]?.image_url || "/placeholder.svg";
 
   return (
     <motion.div
@@ -38,7 +39,7 @@ const ProductCard = ({ product, index = 0, onViewDetail }: ProductCardProps) => 
       >
         <div className="relative aspect-square bg-muted overflow-hidden">
           <img
-            src={product.image_url || "/placeholder.svg"}
+            src={displayImage}
             alt={product.name}
             className={`w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-110 ${
               isSoldOut ? "opacity-50 grayscale" : ""
