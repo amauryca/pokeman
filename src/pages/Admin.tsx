@@ -12,7 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Minus, Trash2, LogOut, Package, ClipboardList } from "lucide-react";
+import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
 
 const categories = ["Trading Cards", "Booster Boxes", "Elite Trainer Boxes"];
 
@@ -27,6 +28,7 @@ const Admin = () => {
   const [newPrice, setNewPrice] = useState("");
   const [newQty, setNewQty] = useState("");
   const [newCategory, setNewCategory] = useState("Trading Cards");
+  const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Auth check
@@ -61,12 +63,13 @@ const Admin = () => {
         price: parseFloat(newPrice),
         quantity: parseInt(newQty),
         category: newCategory,
+        image_url: newImageUrl,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      setNewName(""); setNewPrice(""); setNewQty("");
+      setNewName(""); setNewPrice(""); setNewQty(""); setNewImageUrl(null);
       setDialogOpen(false);
       toast({ title: "Product added!" });
     },
@@ -163,6 +166,7 @@ const Admin = () => {
                         {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                    <ImageUpload value={newImageUrl} onChange={setNewImageUrl} />
                     <Button className="w-full" onClick={() => addProduct.mutate()} disabled={!newName || !newPrice || !newQty}>
                       Add Product
                     </Button>
@@ -175,6 +179,7 @@ const Admin = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Image</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Price</TableHead>
@@ -186,6 +191,32 @@ const Admin = () => {
                   <TableBody>
                     {products?.map((p) => (
                       <TableRow key={p.id}>
+                        <TableCell>
+                          <div className="w-12 h-12 rounded overflow-hidden bg-muted flex-shrink-0">
+                            {p.image_url ? (
+                              <img src={p.image_url} alt={p.name} className="w-full h-full object-contain" />
+                            ) : (
+                              <label className="w-full h-full flex items-center justify-center cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                                <ImagePlus className="h-4 w-4" />
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    const ext = file.name.split(".").pop();
+                                    const path = `${crypto.randomUUID()}.${ext}`;
+                                    const { error } = await supabase.storage.from("product-images").upload(path, file);
+                                    if (error) { toast({ title: "Upload failed", variant: "destructive" }); return; }
+                                    const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
+                                    updateProduct.mutate({ id: p.id, image_url: urlData.publicUrl });
+                                  }}
+                                />
+                              </label>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{p.category}</TableCell>
                         <TableCell>
