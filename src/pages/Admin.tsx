@@ -13,10 +13,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet, X } from "lucide-react";
+import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet, FileText, X } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import MultiImageUpload from "@/components/MultiImageUpload";
 import ExcelUpload from "@/components/ExcelUpload";
+import TxtUpload from "@/components/TxtUpload";
 
 const categories = [
   "Packs",
@@ -293,6 +294,23 @@ const Admin = () => {
                       Duplicates (matching by name) will be skipped automatically.
                     </p>
                     <ExcelUpload
+                      existingProducts={products ?? []}
+                      onComplete={() => queryClient.invalidateQueries({ queryKey: ["products"] })}
+                    />
+                  </DialogContent>
+                </Dialog>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline"><FileText className="h-4 w-4 mr-1" /> AI Text Import</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Import Products with AI</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Paste any text or upload a .txt file — AI will extract product names, prices, quantities, and categories automatically.
+                    </p>
+                    <TxtUpload
                       existingProducts={products ?? []}
                       onComplete={() => queryClient.invalidateQueries({ queryKey: ["products"] })}
                     />
