@@ -19,6 +19,7 @@ import MultiImageUpload from "@/components/MultiImageUpload";
 import ExcelUpload from "@/components/ExcelUpload";
 
 const categories = [
+  "Packs",
   "Booster Packs",
   "Booster Boxes",
   "Booster Bundles",

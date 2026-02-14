@@ -2,6 +2,7 @@ import { useState } from "react";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { Upload, FileSpreadsheet, Loader2 } from "lucide-react";
 import type { Product } from "@/hooks/useProducts";
@@ -12,6 +13,7 @@ interface ExcelProduct {
   quantity: number;
   category: string;
   description?: string;
+  autoImage: boolean;
 }
 
 const POKEMON_TCG_API = "https://api.pokemontcg.io/v2/cards";
@@ -65,6 +67,7 @@ const ExcelUpload = ({ existingProducts, onComplete }: Props) => {
             quantity: parseInt(row["Quantity"] || row["quantity"] || row["Qty"] || row["qty"] || 0),
             category: String(row["Category"] || row["category"] || "Trading Cards"),
             description: row["Description"] || row["description"] || undefined,
+            autoImage: true,
           });
         }
 
@@ -95,8 +98,8 @@ const ExcelUpload = ({ existingProducts, onComplete }: Props) => {
       for (const item of preview) {
         const status = item.quantity <= 0 ? "sold" : "available";
 
-        // Try to auto-fetch image
-        const imageUrl = await fetchPokemonImage(item.name);
+        // Try to auto-fetch image only if toggle is on
+        const imageUrl = item.autoImage ? await fetchPokemonImage(item.name) : null;
 
         const { error } = await supabase.from("products").insert({
           name: item.name,
@@ -168,13 +171,25 @@ const ExcelUpload = ({ existingProducts, onComplete }: Props) => {
                 </span>
               )}
             </p>
-            <div className="space-y-1">
+            <div className="space-y-2">
               {preview.map((p, i) => (
-                <div key={i} className="flex justify-between text-sm">
-                  <span>{p.name}</span>
-                  <span className="text-muted-foreground">
+                <div key={i} className="flex items-center justify-between text-sm gap-2">
+                  <span className="truncate flex-1">{p.name}</span>
+                  <span className="text-muted-foreground whitespace-nowrap">
                     ${p.price.toFixed(2)} · Qty: {p.quantity}
                   </span>
+                  <div className="flex items-center gap-1" title="Auto-fetch image">
+                    <span className="text-xs text-muted-foreground">Img</span>
+                    <Switch
+                      checked={p.autoImage}
+                      onCheckedChange={(checked) => {
+                        setPreview((prev) =>
+                          prev?.map((item, idx) => idx === i ? { ...item, autoImage: checked } : item) ?? null
+                        );
+                      }}
+                      className="scale-75"
+                    />
+                  </div>
                 </div>
               ))}
             </div>
