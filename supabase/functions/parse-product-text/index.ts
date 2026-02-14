@@ -58,6 +58,7 @@ Return a JSON array of products. Each product object should have:
 - "quantity": number (quantity available, use 1 if unknown)
 - "category": string (one of: "Packs", "Booster Packs", "Booster Boxes", "Booster Bundles", "Elite Trainer Boxes", "Ultra Premium Collections", "Collection Boxes", "Tins", "Blisters", "Build & Battle Boxes", "Trainer Kits", "Special Sets", "Single Cards", "Accessories")
 - "description": string or null (any extra details)
+- "image_search_term": string (the best Pokemon card name to search for an image, e.g. for "Charizard VMAX Rainbow Rare" use "Charizard VMAX", for "Scarlet & Violet Booster Box" use "Scarlet Violet", strip set codes/numbers/conditions)
 
 Infer the category from the product name when possible. If a price has a dollar sign, strip it. Parse quantities like "x3" or "qty: 3".
 
