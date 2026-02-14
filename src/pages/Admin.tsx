@@ -317,11 +317,14 @@ const Admin = () => {
                     {products?.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell>
-                          <div className="w-12 h-12 rounded overflow-hidden bg-muted flex-shrink-0">
+                          <div className="relative w-12 h-12 rounded overflow-hidden bg-muted flex-shrink-0">
                             {p.image_url ? (
-                              <img src={p.image_url} alt={p.name} className="w-full h-full object-contain" />
+                              <>
+                                <img src={p.image_url} alt={p.name} className="w-full h-full object-contain" />
+                                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-primary border border-background" title="Image set" />
+                              </>
                             ) : (
-                              <label className="w-full h-full flex items-center justify-center cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                              <label className="w-full h-full flex items-center justify-center cursor-pointer text-destructive hover:text-foreground transition-colors" title="No image — click to upload">
                                 <ImagePlus className="h-4 w-4" />
                                 <input
                                   type="file"
@@ -343,7 +346,19 @@ const Admin = () => {
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">{p.name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{p.category}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={p.category}
+                            onValueChange={(val) => updateProduct.mutate({ id: p.id, category: val })}
+                          >
+                            <SelectTrigger className="w-36 h-8 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
                         <TableCell>
                           <Input
                             type="number"
