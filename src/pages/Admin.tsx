@@ -107,13 +107,24 @@ const Admin = () => {
   // Mutations
   const addProduct = useMutation({
     mutationFn: async () => {
+      // Auto-fetch image if none provided
+      let imageUrl = newImageUrl;
+      if (!imageUrl && newName) {
+        try {
+          const { data: imgData } = await supabase.functions.invoke("fetch-product-image", {
+            body: { name: newName, category: newCategory },
+          });
+          imageUrl = imgData?.image_url || null;
+        } catch { /* best effort */ }
+      }
+
       const { data, error } = await supabase.from("products").insert({
         name: newName,
         price: parseFloat(newPrice),
         quantity: parseInt(newQty),
         category: newCategory,
         description: newDescription || null,
-        image_url: newImageUrl,
+        image_url: imageUrl,
       }).select().single();
       if (error) throw error;
       if (newGalleryImages.length > 0) {
