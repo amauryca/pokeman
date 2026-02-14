@@ -18,15 +18,13 @@ interface ParsedProduct {
   selected: boolean;
 }
 
-const POKEMON_TCG_API = "https://api.pokemontcg.io/v2/cards";
-
-async function fetchPokemonImage(productName: string): Promise<string | null> {
+async function fetchProductImage(name: string, category: string, searchTerm?: string): Promise<string | null> {
   try {
-    const searchName = productName.replace(/[^a-zA-Z0-9 ]/g, "").trim();
-    const res = await fetch(`${POKEMON_TCG_API}?q=name:"${encodeURIComponent(searchName)}"&pageSize=1`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.data?.[0]?.images?.large || data.data?.[0]?.images?.small || null;
+    const { data, error } = await supabase.functions.invoke("fetch-product-image", {
+      body: { name, category, searchTerm },
+    });
+    if (error) return null;
+    return data?.image_url || null;
   } catch {
     return null;
   }
@@ -116,7 +114,7 @@ const TxtUpload = ({ existingProducts, onComplete }: Props) => {
       let added = 0;
       for (const item of selected) {
         const status = item.quantity <= 0 ? "sold" : "available";
-        const imageUrl = item.autoImage ? await fetchPokemonImage(item.imageSearchTerm || item.name) : null;
+        const imageUrl = item.autoImage ? await fetchProductImage(item.name, item.category, item.imageSearchTerm) : null;
 
         const { error } = await supabase.from("products").insert({
           name: item.name,

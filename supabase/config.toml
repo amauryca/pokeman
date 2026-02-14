@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.parse-product-text]
 verify_jwt = false
+
+[functions.fetch-product-image]
+verify_jwt = false
