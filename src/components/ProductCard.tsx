@@ -3,20 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  category: string;
-  status: string;
-  image_url: string | null;
-}
+import type { Product } from "@/hooks/useProducts";
 
 interface ProductCardProps {
   product: Product;
   index?: number;
+  onViewDetail?: (product: Product) => void;
 }
 
 const getStatusBadge = (product: Product) => {
@@ -29,7 +21,7 @@ const getStatusBadge = (product: Product) => {
   return <Badge variant="secondary">In Stock ({product.quantity})</Badge>;
 };
 
-const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
+const ProductCard = ({ product, index = 0, onViewDetail }: ProductCardProps) => {
   const isSoldOut = product.status === "sold" || product.quantity === 0;
 
   return (
@@ -40,7 +32,10 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
       exit={{ opacity: 0, scale: 0.9, y: -10 }}
       transition={{ delay: index * 0.04, duration: 0.35, type: "spring", stiffness: 300, damping: 25 }}
     >
-      <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+      <Card
+        className="group overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+        onClick={() => onViewDetail?.(product)}
+      >
         <div className="relative aspect-square bg-muted overflow-hidden">
           <img
             src={product.image_url || "/placeholder.svg"}
@@ -51,6 +46,15 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             loading="lazy"
           />
           <div className="absolute top-3 right-3">{getStatusBadge(product)}</div>
+
+          {/* Gallery indicator */}
+          {product.product_images && product.product_images.length > 0 && (
+            <div className="absolute bottom-3 left-3">
+              <Badge variant="secondary" className="text-xs">
+                {(product.image_url ? 1 : 0) + product.product_images.length} photos
+              </Badge>
+            </div>
+          )}
 
           {/* Hover reveal overlay */}
           <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out bg-gradient-to-t from-foreground/90 via-foreground/60 to-transparent p-4 pt-10">
@@ -68,7 +72,13 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xl font-bold text-primary">${product.price.toFixed(2)}</span>
-            <Button asChild size="sm" disabled={isSoldOut} variant={isSoldOut ? "outline" : "default"}>
+            <Button
+              asChild
+              size="sm"
+              disabled={isSoldOut}
+              variant={isSoldOut ? "outline" : "default"}
+              onClick={(e) => e.stopPropagation()}
+            >
               <Link to={`/order?product=${encodeURIComponent(product.name)}`}>
                 {isSoldOut ? "Sold Out" : "Contact Me"}
               </Link>
