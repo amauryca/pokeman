@@ -1,1 +1,4 @@
 project_id = "xeqzpsejalqyzpqwtnpb"
+
+[functions.stock-change-notification]
+verify_jwt = false
