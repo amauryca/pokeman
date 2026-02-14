@@ -13,6 +13,7 @@ interface ParsedProduct {
   quantity: number;
   category: string;
   description?: string | null;
+  imageSearchTerm?: string;
   autoImage: boolean;
   selected: boolean;
 }
@@ -78,6 +79,7 @@ const TxtUpload = ({ existingProducts, onComplete }: Props) => {
           quantity: parseInt(item.quantity) || 1,
           category: item.category || "Trading Cards",
           description: item.description || null,
+          imageSearchTerm: item.image_search_term || name,
           autoImage: true,
           selected: true,
         });
@@ -114,7 +116,7 @@ const TxtUpload = ({ existingProducts, onComplete }: Props) => {
       let added = 0;
       for (const item of selected) {
         const status = item.quantity <= 0 ? "sold" : "available";
-        const imageUrl = item.autoImage ? await fetchPokemonImage(item.name) : null;
+        const imageUrl = item.autoImage ? await fetchPokemonImage(item.imageSearchTerm || item.name) : null;
 
         const { error } = await supabase.from("products").insert({
           name: item.name,
