@@ -4,4 +4,4 @@ project_id = "xeqzpsejalqyzpqwtnpb"
 verify_jwt = false
 
 [functions.parse-product-text]
-verify_jwt = true
+verify_jwt = false
