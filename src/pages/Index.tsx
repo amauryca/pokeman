@@ -5,7 +5,7 @@ import { ArrowRight, ShoppingBag, Mail, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SplashScreen from "@/components/SplashScreen";
 import Navbar from "@/components/Navbar";
-import ProductCard from "@/components/ProductCard";
+import PackRipCard from "@/components/PackRipCard";
 import { useProducts } from "@/hooks/useProducts";
 
 const Index = () => {
@@ -98,7 +98,7 @@ const Index = () => {
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {featured.map((product, i) => (
-                <ProductCard key={product.id} product={product} index={i} />
+                <PackRipCard key={product.id} product={product} index={i} />
               ))}
             </div>
           </section>
