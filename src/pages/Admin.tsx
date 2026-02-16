@@ -247,26 +247,28 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="bg-background border-b">
-        <div className="container flex h-14 items-center justify-between">
+        <div className="container flex h-14 items-center justify-between px-4">
           <h1 className="font-heading font-bold text-lg">PokéMarket Admin</h1>
           <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-1" /> Logout
+            <LogOut className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Logout</span>
           </Button>
         </div>
       </header>
 
-      <div className="container py-6">
+      <div className="container py-4 px-4 sm:py-6">
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-4 sm:mb-6">
           <Button
             variant={activeTab === "products" ? "default" : "outline"}
             onClick={() => setActiveTab("products")}
+            size="sm"
           >
             <Package className="h-4 w-4 mr-1" /> Products
           </Button>
           <Button
             variant={activeTab === "orders" ? "default" : "outline"}
             onClick={() => setActiveTab("orders")}
+            size="sm"
           >
             <ClipboardList className="h-4 w-4 mr-1" /> Orders
             {orders && orders.filter((o: any) => o.status === "pending").length > 0 && (
@@ -280,14 +282,14 @@ const Admin = () => {
         {/* Products Tab */}
         {activeTab === "products" && (
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="font-heading">Products ({products?.length ?? 0})</CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Product</Button>
+                    <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add</Button>
                   </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-[95vw] sm:max-w-lg">
                   <DialogHeader>
                     <DialogTitle>Add New Product</DialogTitle>
                   </DialogHeader>
@@ -318,9 +320,9 @@ const Admin = () => {
                 </Dialog>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button size="sm" variant="outline"><FileSpreadsheet className="h-4 w-4 mr-1" /> Excel Upload</Button>
+                    <Button size="sm" variant="outline"><FileSpreadsheet className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Excel</span></Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-[95vw] sm:max-w-lg">
                     <DialogHeader>
                       <DialogTitle>Import Products from Excel</DialogTitle>
                     </DialogHeader>
@@ -336,9 +338,9 @@ const Admin = () => {
                 </Dialog>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button size="sm" variant="outline"><FileText className="h-4 w-4 mr-1" /> AI Text Import</Button>
+                    <Button size="sm" variant="outline"><FileText className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">AI Import</span></Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-lg">
+                  <DialogContent className="max-w-[95vw] sm:max-w-lg">
                     <DialogHeader>
                       <DialogTitle>Import Products with AI</DialogTitle>
                     </DialogHeader>
@@ -358,15 +360,16 @@ const Admin = () => {
                   disabled={fetchingImages || !products?.some(p => !p.image_url)}
                 >
                   {fetchingImages ? (
-                    <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Fetching...</>
+                    <><Loader2 className="h-4 w-4 sm:mr-1 animate-spin" /> <span className="hidden sm:inline">Fetching...</span></>
                   ) : (
-                    <><Wand2 className="h-4 w-4 mr-1" /> Fetch Missing Images</>
+                    <><Wand2 className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Fetch Images</span></>
                   )}
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -500,6 +503,88 @@ const Admin = () => {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Mobile card list */}
+              <div className="md:hidden space-y-3">
+                {products?.map((p) => (
+                  <div key={p.id} className="border rounded-lg p-3 bg-background space-y-3">
+                    <div className="flex items-start gap-3">
+                      {/* Image */}
+                      <div className="relative w-14 h-14 rounded overflow-hidden bg-muted flex-shrink-0">
+                        {p.image_url ? (
+                          <img src={p.image_url} alt={p.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <label className="w-full h-full flex items-center justify-center cursor-pointer text-muted-foreground">
+                            <ImagePlus className="h-4 w-4" />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const ext = file.name.split(".").pop();
+                                const path = `${crypto.randomUUID()}.${ext}`;
+                                const { error } = await supabase.storage.from("product-images").upload(path, file);
+                                if (error) { toast({ title: "Upload failed", variant: "destructive" }); return; }
+                                const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
+                                updateProduct.mutate({ id: p.id, image_url: urlData.publicUrl });
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{p.name}</p>
+                        <p className="text-xs text-muted-foreground">{p.category}</p>
+                      </div>
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Gallery" onClick={() => {
+                          setGalleryDialogProduct(p);
+                          setGalleryImages(p.product_images?.map(img => img.image_url) || []);
+                        }}>
+                          <Images className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteProduct.mutate(p.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    {/* Controls row */}
+                    <div className="flex items-center justify-between gap-2">
+                      <Input
+                        type="number"
+                        className="w-20 h-8 text-sm"
+                        defaultValue={p.price}
+                        onBlur={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (val !== p.price) updateProduct.mutate({ id: p.id, price: val });
+                        }}
+                      />
+                      <div className="flex items-center gap-1">
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateProduct.mutate({ id: p.id, quantity: Math.max(0, p.quantity - 1) })}>
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-6 text-center text-sm">{p.quantity}</span>
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateProduct.mutate({ id: p.id, quantity: p.quantity + 1 })}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground">Sold</span>
+                        <Switch
+                          checked={p.status === "sold"}
+                          onCheckedChange={(checked) =>
+                            updateProduct.mutate({ id: p.id, status: checked ? "sold" : "available" })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -511,7 +596,8 @@ const Admin = () => {
               <CardTitle className="font-heading">Order Requests</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -551,6 +637,37 @@ const Admin = () => {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Mobile order cards */}
+              <div className="md:hidden space-y-3">
+                {orders?.map((o: any) => (
+                  <div key={o.id} className="border rounded-lg p-3 bg-background space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium text-sm">{o.customer_name}</p>
+                        <p className="text-xs text-muted-foreground">{o.email}</p>
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">{new Date(o.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {(o.products_requested as any[])?.map((p: any) => `${p.name} (x${p.quantity})`).join(", ")}
+                    </p>
+                    <Select
+                      value={o.status}
+                      onValueChange={(val) => updateOrderStatus.mutate({ id: o.id, status: val })}
+                    >
+                      <SelectTrigger className="w-full h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="contacted">Contacted</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -558,7 +675,7 @@ const Admin = () => {
 
       {/* Gallery Management Dialog */}
       <Dialog open={!!galleryDialogProduct} onOpenChange={(open) => { if (!open) setGalleryDialogProduct(null); }}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Gallery — {galleryDialogProduct?.name}</DialogTitle>
           </DialogHeader>
