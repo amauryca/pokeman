@@ -117,7 +117,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: "PokéMarket <onboarding@resend.dev>",
-        to: ["amaurycacevedo@gmail.com"],
+        to: ["amaury2007@icloud.com"],
         subject,
         html,
       }),
