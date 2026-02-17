@@ -18,9 +18,10 @@ interface ExcelProduct {
 interface Props {
   existingProducts: Product[];
   onComplete: () => void;
+  onProductsAdded?: (products: Array<{ name: string; price: number; quantity: number; status: string }>) => void;
 }
 
-const ExcelUpload = ({ existingProducts, onComplete }: Props) => {
+const ExcelUpload = ({ existingProducts, onComplete, onProductsAdded }: Props) => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<ExcelProduct[] | null>(null);
   const [skipped, setSkipped] = useState<string[]>([]);
@@ -99,15 +100,9 @@ const ExcelUpload = ({ existingProducts, onComplete }: Props) => {
         }
       }
 
-      // Send stock change notification
-      if (stockChanges.length > 0) {
-        try {
-          await supabase.functions.invoke("stock-change-notification", {
-            body: { changes: stockChanges, type: "bulk_upload" },
-          });
-        } catch {
-          // Best-effort notification
-        }
+      // Track for batch notification instead of sending immediately
+      if (stockChanges.length > 0 && onProductsAdded) {
+        onProductsAdded(stockChanges);
       }
 
       toast({ title: `${added} product(s) added successfully!` });
