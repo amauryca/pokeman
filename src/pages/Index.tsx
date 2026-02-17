@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import SplashScreen from "@/components/SplashScreen";
 import Navbar from "@/components/Navbar";
 import PackRipCard from "@/components/PackRipCard";
+import NewsletterSignup from "@/components/NewsletterSignup";
 import { useProducts } from "@/hooks/useProducts";
 
 const Index = () => {
@@ -103,6 +104,9 @@ const Index = () => {
             </div>
           </section>
         )}
+
+        {/* Newsletter */}
+        <NewsletterSignup />
 
         {/* Footer */}
         <footer className="border-t bg-muted/30 py-8">
