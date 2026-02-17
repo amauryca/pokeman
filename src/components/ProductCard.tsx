@@ -12,6 +12,13 @@ interface ProductCardProps {
 }
 
 const getStatusBadge = (product: Product) => {
+  if (product.status === "occur") {
+    return (
+      <Badge variant="occur" className="animate-fade-in-up">
+        Coming Soon
+      </Badge>
+    );
+  }
   if (product.status === "sold" || product.quantity === 0) {
     return <Badge variant="destructive">Sold Out</Badge>;
   }
