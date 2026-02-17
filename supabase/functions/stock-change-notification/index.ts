@@ -14,6 +14,28 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;');
 }
 
+async function sendEmail(apiKey: string, to: string, subject: string, html: string) {
+  const res = await fetch("https://smtp.maileroo.com/api/v2/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Api-Key": apiKey,
+    },
+    body: JSON.stringify({
+      from: { address: "noreply@a1b60fff033b8428.maileroo.org", display_name: "PokéMarket" },
+      to: [{ address: to }],
+      subject,
+      html,
+    }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    console.error(`Maileroo error sending to ${to}:`, data);
+  }
+  return { ok: res.ok, data };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -70,9 +92,9 @@ serve(async (req) => {
       });
     }
 
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY is not configured");
+    const MAILEROO_API_KEY = Deno.env.get("MAILEROO_API_KEY");
+    if (!MAILEROO_API_KEY) {
+      throw new Error("MAILEROO_API_KEY is not configured");
     }
 
     const isUpload = type === "bulk_upload";
@@ -98,7 +120,8 @@ serve(async (req) => {
           </tr>`
       )
       .join("");
-    const html = `
+
+    const adminHtml = `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
         <h2 style="color:#dc2626;">PokéMarket Inventory ${isNewProduct ? "New Product" : isUpload ? "Upload" : "Update"}</h2>
         <p>${isNewProduct ? "A new product was just added:" : isUpload ? `${changes.length} new product(s) were added via Excel upload.` : "The following products had stock changes:"}</p>
@@ -118,24 +141,59 @@ serve(async (req) => {
       </div>
     `;
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: "PokéMarket <onboarding@resend.dev>",
-        to: ["amaury2007@icloud.com"],
-        subject,
-        html,
-      }),
-    });
+    // Send admin notification
+    await sendEmail(MAILEROO_API_KEY, "amaury2007@icloud.com", subject, adminHtml);
 
-    const data = await res.json();
-    if (!res.ok) {
-      console.error("Resend error:", data);
-      throw new Error(data.message || "Failed to send email");
+    // For new products or bulk uploads, also notify newsletter subscribers
+    if (isNewProduct || isUpload) {
+      // Use service role to read subscribers
+      const serviceSupabase = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      );
+
+      const { data: subscribers } = await serviceSupabase
+        .from("newsletter_subscribers")
+        .select("email")
+        .eq("is_active", true);
+
+      if (subscribers && subscribers.length > 0) {
+        const productNames = changes.map((c: { name: string }) => escapeHtml(c.name));
+        const subscriberSubject = isUpload
+          ? `🆕 ${changes.length} New Products Just Dropped on PokéMarket!`
+          : `🆕 New Drop: ${escapeHtml(changes[0]?.name || "Check it out!")}`;
+
+        const productList = changes
+          .map(
+            (c: { name: string; price: number }) =>
+              `<li style="margin-bottom:8px;"><strong>${escapeHtml(c.name)}</strong> — $${Number(c.price).toFixed(2)}</li>`
+          )
+          .join("");
+
+        const subscriberHtml = `
+          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+            <h2 style="color:#dc2626;">New Drop Alert! 🔥</h2>
+            <p>Hey! New Pokémon products just landed on PokéMarket:</p>
+            <ul style="padding-left:20px;">${productList}</ul>
+            <p style="margin-top:16px;">
+              <a href="https://pokeman.lovable.app/products" style="display:inline-block;padding:12px 24px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">
+                Shop Now →
+              </a>
+            </p>
+            <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
+            <p style="color:#888;font-size:12px;"><em>You're receiving this because you subscribed to PokéMarket updates.</em></p>
+          </div>
+        `;
+
+        // Send to each subscriber (fire-and-forget, don't block on failures)
+        const emailPromises = subscribers.map((sub) =>
+          sendEmail(MAILEROO_API_KEY, sub.email, subscriberSubject, subscriberHtml)
+            .catch((err) => console.error(`Failed to email ${sub.email}:`, err))
+        );
+
+        await Promise.allSettled(emailPromises);
+        console.log(`Sent new product notification to ${subscribers.length} subscriber(s)`);
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {
