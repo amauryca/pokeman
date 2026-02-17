@@ -149,8 +149,7 @@ serve(async (req) => {
       </div>
     `;
 
-    // Send admin notification
-    await sendEmail(MAILEROO_API_KEY, "amaury2007@icloud.com", subject, adminHtml);
+    // Skip admin email — only notify subscribers for new products/uploads
 
     // For new products or bulk uploads, also notify newsletter subscribers
     if (isNewProduct || isUpload) {

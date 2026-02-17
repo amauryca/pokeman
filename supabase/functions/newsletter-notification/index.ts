@@ -42,19 +42,7 @@ serve(async (req) => {
       throw new Error("MAILEROO_API_KEY is not configured");
     }
 
-    // 1. Notify admin about new subscriber
-    await sendEmail(
-      MAILEROO_API_KEY,
-      "amaury2007@icloud.com",
-      `New Newsletter Subscriber: ${email}`,
-      `
-        <h2>New Newsletter Subscriber! 🎉</h2>
-        <p>Someone just signed up for your PokéMarket newsletter.</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <hr/>
-        <p><em>Sent automatically from PokéMarket</em></p>
-      `
-    );
+    // Skip admin notification for new subscribers
 
     // 2. Send welcome email to the subscriber
     await sendEmail(
