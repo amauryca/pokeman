@@ -195,15 +195,17 @@ const Admin = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       // Send stock notification for quantity/status changes
-      if (data && ("quantity" in data || "status" in data)) {
+      if (data && ("quantity" in data || "status" in data || "price" in data)) {
         const product = products?.find((p) => p.id === data.id);
         if (product) {
           const qty = data.quantity ?? product.quantity;
           const status = data.status ?? product.status;
+          const price = data.price ?? product.price;
+          const type = "price" in data && !("quantity" in data) && !("status" in data) ? "price_update" : "stock_update";
           supabase.functions.invoke("stock-change-notification", {
             body: {
-              changes: [{ name: product.name, price: product.price, quantity: qty, status }],
-              type: "stock_update",
+              changes: [{ name: product.name, price, quantity: qty, status, oldPrice: product.price }],
+              type,
             },
           }).catch(() => {});
         }
