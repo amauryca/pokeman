@@ -120,24 +120,35 @@ serve(async (req) => {
       </div>
     `;
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: "PokéMarket <onboarding@resend.dev>",
-        to: ["amaury2007@icloud.com"],
-        subject,
-        html,
-      }),
-    });
+    // Send with retry for rate limits
+    let res: Response | null = null;
+    let data: Record<string, unknown> | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: "PokéMarket <onboarding@resend.dev>",
+          to: ["amaury2007@icloud.com"],
+          subject,
+          html,
+        }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) {
+      data = await res.json();
+      if (res.ok) break;
+
+      if (res.status === 429 && attempt < 2) {
+        // Wait before retry (1s, then 2s)
+        await new Promise((r) => setTimeout(r, (attempt + 1) * 1000));
+        continue;
+      }
+
       console.error("Resend error:", data);
-      throw new Error(data.message || "Failed to send email");
+      throw new Error((data as { message?: string })?.message || "Failed to send email");
     }
 
     return new Response(JSON.stringify({ success: true }), {
