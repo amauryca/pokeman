@@ -30,6 +30,7 @@ const getStatusBadge = (product: Product) => {
 
 const ProductCard = ({ product, index = 0, onViewDetail }: ProductCardProps) => {
   const isSoldOut = product.status === "sold" || product.quantity === 0;
+  const isOccur = product.status === "occur";
   const displayImage = product.image_url || product.product_images?.[0]?.image_url || "/placeholder.svg";
 
   return (
@@ -49,7 +50,7 @@ const ProductCard = ({ product, index = 0, onViewDetail }: ProductCardProps) => 
             src={displayImage}
             alt={product.name}
             className={`w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-110 ${
-              isSoldOut ? "opacity-50 grayscale" : ""
+              isSoldOut ? "opacity-50 grayscale" : isOccur ? "grayscale" : ""
             }`}
             loading="lazy"
           />
