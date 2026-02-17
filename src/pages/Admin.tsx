@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet, FileText, X, Wand2, Loader2 } from "lucide-react";
+import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet, FileText, X, Wand2, Loader2, Save } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import MultiImageUpload from "@/components/MultiImageUpload";
 import ExcelUpload from "@/components/ExcelUpload";
@@ -56,6 +56,26 @@ const Admin = () => {
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [fetchingImages, setFetchingImages] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
+
+  // Draft state: tracks unsaved edits per product id
+  type Draft = { price?: number; quantity?: number; category?: string; status?: string };
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const setDraft = (id: string, field: keyof Draft, value: number | string) => {
+    setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  };
+  const clearDraft = (id: string) => {
+    setDrafts((prev) => { const next = { ...prev }; delete next[id]; return next; });
+  };
+  const hasDraft = (id: string) => drafts[id] && Object.keys(drafts[id]).length > 0;
+  const getDraftValue = <K extends keyof Draft>(p: Product, field: K): NonNullable<Draft[K]> => {
+    return (drafts[p.id]?.[field] ?? p[field]) as NonNullable<Draft[K]>;
+  };
+  const saveDraft = (p: Product) => {
+    const draft = drafts[p.id];
+    if (!draft) return;
+    updateProduct.mutate({ id: p.id, ...draft });
+    clearDraft(p.id);
+  };
 
   // Auth + admin role check
   useEffect(() => {
@@ -451,8 +471,8 @@ const Admin = () => {
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell>
                           <Select
-                            value={p.category}
-                            onValueChange={(val) => updateProduct.mutate({ id: p.id, category: val })}
+                            value={getDraftValue(p, "category")}
+                            onValueChange={(val) => setDraft(p.id, "category", val)}
                           >
                             <SelectTrigger className="w-36 h-8 text-sm">
                               <SelectValue />
@@ -466,10 +486,10 @@ const Admin = () => {
                           <Input
                             type="number"
                             className="w-20 h-8"
-                            defaultValue={p.price}
-                            onBlur={(e) => {
+                            value={getDraftValue(p, "price")}
+                            onChange={(e) => {
                               const val = parseFloat(e.target.value);
-                              if (val !== p.price) updateProduct.mutate({ id: p.id, price: val });
+                              if (!isNaN(val) && val >= 0) setDraft(p.id, "price", val);
                             }}
                           />
                         </TableCell>
@@ -479,19 +499,17 @@ const Admin = () => {
                               variant="outline"
                               size="icon"
                               className="h-7 w-7"
-                              onClick={() => updateProduct.mutate({ id: p.id, quantity: Math.max(0, p.quantity - 1) })}
+                              onClick={() => setDraft(p.id, "quantity", Math.max(0, getDraftValue(p, "quantity") - 1))}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
                             <Input
                               type="number"
                               min={0}
-                              value={p.quantity}
+                              value={getDraftValue(p, "quantity")}
                               onChange={(e) => {
                                 const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val) && val >= 0) {
-                                  updateProduct.mutate({ id: p.id, quantity: val });
-                                }
+                                if (!isNaN(val) && val >= 0) setDraft(p.id, "quantity", val);
                               }}
                               className="w-16 h-7 text-center text-sm px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
@@ -499,7 +517,7 @@ const Admin = () => {
                               variant="outline"
                               size="icon"
                               className="h-7 w-7"
-                              onClick={() => updateProduct.mutate({ id: p.id, quantity: p.quantity + 1 })}
+                              onClick={() => setDraft(p.id, "quantity", getDraftValue(p, "quantity") + 1)}
                             >
                               <Plus className="h-3 w-3" />
                             </Button>
@@ -507,8 +525,8 @@ const Admin = () => {
                         </TableCell>
                         <TableCell>
                           <Select
-                            value={p.status ?? "available"}
-                            onValueChange={(val) => updateProduct.mutate({ id: p.id, status: val })}
+                            value={getDraftValue(p, "status") || "available"}
+                            onValueChange={(val) => setDraft(p.id, "status", val)}
                           >
                             <SelectTrigger className="w-36 h-8 text-sm">
                               <SelectValue />
@@ -522,6 +540,16 @@ const Admin = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
+                            {hasDraft(p.id) && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="h-8 gap-1"
+                                onClick={() => saveDraft(p)}
+                              >
+                                <Save className="h-3.5 w-3.5" /> Save
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -599,36 +627,48 @@ const Admin = () => {
                       </div>
                     </div>
                     {/* Controls row */}
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                       <Input
                         type="number"
                         className="w-20 h-8 text-sm"
-                        defaultValue={p.price}
-                        onBlur={(e) => {
+                        value={getDraftValue(p, "price")}
+                        onChange={(e) => {
                           const val = parseFloat(e.target.value);
-                          if (val !== p.price) updateProduct.mutate({ id: p.id, price: val });
+                          if (!isNaN(val) && val >= 0) setDraft(p.id, "price", val);
                         }}
                       />
                       <div className="flex items-center gap-1">
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateProduct.mutate({ id: p.id, quantity: Math.max(0, p.quantity - 1) })}>
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setDraft(p.id, "quantity", Math.max(0, getDraftValue(p, "quantity") - 1))}>
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-6 text-center text-sm">{p.quantity}</span>
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateProduct.mutate({ id: p.id, quantity: p.quantity + 1 })}>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={getDraftValue(p, "quantity")}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val) && val >= 0) setDraft(p.id, "quantity", val);
+                          }}
+                          className="w-14 h-7 text-center text-sm px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setDraft(p.id, "quantity", getDraftValue(p, "quantity") + 1)}>
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <Select value={p.status ?? "available"} onValueChange={(val) => updateProduct.mutate({ id: p.id, status: val })}>
-                          <SelectTrigger className="w-32 h-8 text-sm"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="available">Available</SelectItem>
-                            <SelectItem value="occur">Coming Soon</SelectItem>
-                            <SelectItem value="sold">Sold Out</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Select value={getDraftValue(p, "status") || "available"} onValueChange={(val) => setDraft(p.id, "status", val)}>
+                        <SelectTrigger className="w-32 h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="available">Available</SelectItem>
+                          <SelectItem value="occur">Coming Soon</SelectItem>
+                          <SelectItem value="sold">Sold Out</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
+                    {hasDraft(p.id) && (
+                      <Button variant="default" size="sm" className="w-full gap-1" onClick={() => saveDraft(p)}>
+                        <Save className="h-3.5 w-3.5" /> Save Changes
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
