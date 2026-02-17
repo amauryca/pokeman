@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const POKEMON_TCG_API = "https://api.pokemontcg.io/v2";
+const TCGDEX_API = "https://api.tcgdex.net/v2/en";
 
 async function fetchJson(url: string): Promise<any | null> {
   try {
@@ -14,26 +14,25 @@ async function fetchJson(url: string): Promise<any | null> {
     const timer = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(url, { signal: controller.signal });
     clearTimeout(timer);
-    if (!res.ok) {
-      const body = await res.text();
-      console.log(`HTTP ${res.status} for ${url}: ${body.substring(0, 200)}`);
-      return null;
-    }
+    if (!res.ok) return null;
     return await res.json();
-  } catch (e) {
-    console.error(`Fetch error: ${e}`);
+  } catch {
     return null;
   }
 }
 
-// Strategy 1: Exact card name search
-async function searchCardExact(name: string): Promise<string | null> {
+// Strategy 1: Search cards by name
+async function searchCard(name: string): Promise<string | null> {
   const clean = name.replace(/[^a-zA-Z0-9 ]/g, "").trim();
-  // Don't encode the structural parts of the query - only encode the search term
-  const url = `${POKEMON_TCG_API}/cards?q=name:"${encodeURIComponent(clean)}"&pageSize=1&select=images`;
-  console.log(`[exact] ${url}`);
+  if (!clean) return null;
+  const url = `${TCGDEX_API}/cards?name=${encodeURIComponent(clean)}`;
+  console.log(`[card-search] ${url}`);
   const data = await fetchJson(url);
-  return data?.data?.[0]?.images?.large || data?.data?.[0]?.images?.small || null;
+  if (!Array.isArray(data) || data.length === 0) return null;
+  // Get full card details for image
+  const cardId = data[0].id;
+  const card = await fetchJson(`${TCGDEX_API}/cards/${cardId}`);
+  return card?.image ? card.image + "/high.webp" : null;
 }
 
 // Strategy 2: Partial name (first 1-2 words)
@@ -41,52 +40,49 @@ async function searchCardPartial(name: string): Promise<string | null> {
   const words = name.replace(/[^a-zA-Z0-9 ]/g, "").trim().split(/\s+/);
   const term = words.slice(0, 2).join(" ");
   if (!term) return null;
-  const url = `${POKEMON_TCG_API}/cards?q=name:"${encodeURIComponent(term)}"&pageSize=1&select=images`;
-  console.log(`[partial] ${url}`);
-  const data = await fetchJson(url);
-  return data?.data?.[0]?.images?.large || data?.data?.[0]?.images?.small || null;
+  return searchCard(term);
 }
 
-// Strategy 3: Set image search
-async function searchSetImage(name: string): Promise<string | null> {
+// Strategy 3: First word only
+async function searchCardFirstWord(name: string): Promise<string | null> {
+  const words = name.replace(/[^a-zA-Z0-9 ]/g, "").trim().split(/\s+/);
+  const first = words[0];
+  if (!first || first.length < 3) return null;
+  return searchCard(first);
+}
+
+// Strategy 4: Search sets by name
+async function searchSet(name: string): Promise<string | null> {
   const clean = name
     .replace(/\b(booster|box|pack|bundle|elite|trainer|collection|tin|blister|premium|ultra|build|battle|kit|etb|display|case)\b/gi, "")
     .replace(/[^a-zA-Z0-9 &]/g, "")
     .trim();
   if (!clean) return null;
-  const url = `${POKEMON_TCG_API}/sets?q=name:"${encodeURIComponent(clean)}"&pageSize=1&select=images,name`;
-  console.log(`[set] ${url}`);
+  const url = `${TCGDEX_API}/sets?name=${encodeURIComponent(clean)}`;
+  console.log(`[set-search] ${url}`);
   const data = await fetchJson(url);
-  return data?.data?.[0]?.images?.logo || data?.data?.[0]?.images?.symbol || null;
+  if (!Array.isArray(data) || data.length === 0) return null;
+  const set = await fetchJson(`${TCGDEX_API}/sets/${data[0].id}`);
+  return set?.logo ? set.logo + ".webp" : null;
 }
 
-// Strategy 4: Set partial search
+// Strategy 5: Set partial - try individual keywords
 async function searchSetPartial(name: string): Promise<string | null> {
   const clean = name
     .replace(/\b(booster|box|pack|bundle|elite|trainer|collection|tin|blister|premium|ultra|build|battle|kit|etb|display|case|pokemon|tcg|cards?)\b/gi, "")
     .replace(/[^a-zA-Z0-9 &]/g, "")
     .trim();
   const words = clean.split(/\s+/).filter(w => w.length > 2);
-  if (words.length === 0) return null;
   for (const word of words.slice(0, 3)) {
-    const url = `${POKEMON_TCG_API}/sets?q=name:"${encodeURIComponent(word)}"&pageSize=1&select=images`;
+    const url = `${TCGDEX_API}/sets?name=${encodeURIComponent(word)}`;
     console.log(`[set-partial] "${word}"`);
     const data = await fetchJson(url);
-    const img = data?.data?.[0]?.images?.logo || data?.data?.[0]?.images?.symbol;
-    if (img) return img;
+    if (Array.isArray(data) && data.length > 0) {
+      const set = await fetchJson(`${TCGDEX_API}/sets/${data[0].id}`);
+      if (set?.logo) return set.logo + ".webp";
+    }
   }
   return null;
-}
-
-// Strategy 5: Wildcard search
-async function searchCardWildcard(name: string): Promise<string | null> {
-  const words = name.replace(/[^a-zA-Z0-9 ]/g, "").trim().split(/\s+/);
-  const first = words[0];
-  if (!first || first.length < 3) return null;
-  const url = `${POKEMON_TCG_API}/cards?q=name:${encodeURIComponent(first)}*&pageSize=1&select=images`;
-  console.log(`[wildcard] ${url}`);
-  const data = await fetchJson(url);
-  return data?.data?.[0]?.images?.large || data?.data?.[0]?.images?.small || null;
 }
 
 function isSealedProduct(name: string, category: string): boolean {
@@ -116,15 +112,15 @@ serve(async (req) => {
     const sealed = isSealedProduct(productName, productCategory);
 
     if (sealed) {
-      imageUrl = await searchSetImage(productName);
+      imageUrl = await searchSet(productName);
       if (!imageUrl) imageUrl = await searchSetPartial(productName);
-      if (!imageUrl) imageUrl = await searchCardExact(productName);
+      if (!imageUrl) imageUrl = await searchCard(productName);
       if (!imageUrl) imageUrl = await searchCardPartial(productName);
     } else {
-      imageUrl = await searchCardExact(productName);
+      imageUrl = await searchCard(productName);
       if (!imageUrl) imageUrl = await searchCardPartial(productName);
-      if (!imageUrl) imageUrl = await searchCardWildcard(productName);
-      if (!imageUrl) imageUrl = await searchSetImage(productName);
+      if (!imageUrl) imageUrl = await searchCardFirstWord(productName);
+      if (!imageUrl) imageUrl = await searchSet(productName);
     }
 
     console.log(`Result for "${productName}": ${imageUrl ? "✅ " + imageUrl : "❌ not found"}`);
