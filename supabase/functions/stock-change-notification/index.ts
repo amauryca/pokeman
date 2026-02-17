@@ -81,8 +81,11 @@ serve(async (req) => {
     }
 
     const isUpload = type === "bulk_upload";
+    const isNewProduct = type === "new_product";
     const subject = isUpload
       ? `📦 ${changes.length} New Products Added to PokéMarket`
+      : isNewProduct
+      ? `🆕 New Product Added — ${escapeHtml(changes[0]?.name || "PokéMarket")}`
       : `📊 Stock Update — PokéMarket Inventory Change`;
 
     const rows = changes
@@ -102,8 +105,8 @@ serve(async (req) => {
       .join("");
     const html = `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-        <h2 style="color:#dc2626;">PokéMarket Inventory ${isUpload ? "Upload" : "Update"}</h2>
-        <p>${isUpload ? `${changes.length} new product(s) were added via Excel upload.` : "The following products had stock changes:"}</p>
+        <h2 style="color:#dc2626;">PokéMarket Inventory ${isNewProduct ? "New Product" : isUpload ? "Upload" : "Update"}</h2>
+        <p>${isNewProduct ? "A new product was just added:" : isUpload ? `${changes.length} new product(s) were added via Excel upload.` : "The following products had stock changes:"}</p>
         <table style="width:100%;border-collapse:collapse;margin:16px 0;">
           <thead>
             <tr style="background:#f8f8f8;">

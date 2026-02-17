@@ -164,6 +164,13 @@ const Admin = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      // Send notification for new product
+      supabase.functions.invoke("stock-change-notification", {
+        body: {
+          changes: [{ name: newName, price: parseFloat(newPrice), quantity: parseInt(newQty), status: newStatus }],
+          type: "new_product",
+        },
+      }).catch(() => {});
       setNewName(""); setNewPrice(""); setNewQty(""); setNewImageUrl(null); setNewDescription(""); setNewGalleryImages([]); setNewStatus("available");
       setDialogOpen(false);
       toast({ title: "Product added!" });
