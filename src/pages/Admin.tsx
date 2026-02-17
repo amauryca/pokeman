@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useProducts, type Product } from "@/hooks/useProducts";
@@ -75,6 +75,12 @@ const Admin = () => {
     if (!draft) return;
     updateProduct.mutate({ id: p.id, ...draft });
     clearDraft(p.id);
+  };
+  const hasPendingDrafts = Object.keys(drafts).some((id) => drafts[id] && Object.keys(drafts[id]).length > 0);
+  const saveAllDrafts = () => {
+    products?.forEach((p) => {
+      if (hasDraft(p.id)) saveDraft(p);
+    });
   };
 
   // Auth + admin role check
@@ -183,27 +189,6 @@ const Admin = () => {
     onError: () => toast({ title: "Failed to update gallery", variant: "destructive" }),
   });
 
-  // Debounced stock notification - batches rapid changes
-  const notificationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingChanges = useRef<Array<{ name: string; price: number; quantity: number; status: string }>>([]);
-
-  const flushNotification = useCallback(() => {
-    if (pendingChanges.current.length === 0) return;
-    const changes = [...pendingChanges.current];
-    pendingChanges.current = [];
-    supabase.functions.invoke("stock-change-notification", {
-      body: { changes, type: "stock_update" },
-    }).catch(() => {});
-  }, []);
-
-  const queueNotification = useCallback((change: { name: string; price: number; quantity: number; status: string }) => {
-    // Replace existing entry for same product name
-    pendingChanges.current = pendingChanges.current.filter((c) => c.name !== change.name);
-    pendingChanges.current.push(change);
-    if (notificationTimer.current) clearTimeout(notificationTimer.current);
-    notificationTimer.current = setTimeout(flushNotification, 3000);
-  }, [flushNotification]);
-
   const updateProduct = useMutation({
     mutationFn: async (updates: Partial<Product> & { id: string }) => {
       const { id, ...rest } = updates;
@@ -213,12 +198,18 @@ const Admin = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      // Send stock notification for quantity/status changes
       if (data && ("quantity" in data || "status" in data)) {
         const product = products?.find((p) => p.id === data.id);
         if (product) {
           const qty = data.quantity ?? product.quantity;
           const status = data.status ?? product.status;
-          queueNotification({ name: product.name, price: product.price, quantity: qty, status });
+          supabase.functions.invoke("stock-change-notification", {
+            body: {
+              changes: [{ name: product.name, price: product.price, quantity: qty, status }],
+              type: "stock_update",
+            },
+          }).catch(() => {});
         }
       }
     },
@@ -413,6 +404,11 @@ const Admin = () => {
                     <><Wand2 className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Fetch Images</span></>
                   )}
                 </Button>
+                {hasPendingDrafts && (
+                  <Button size="sm" onClick={saveAllDrafts} className="gap-1">
+                    <Save className="h-4 w-4" /> Save All
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
