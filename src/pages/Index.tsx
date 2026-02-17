@@ -7,10 +7,12 @@ import SplashScreen from "@/components/SplashScreen";
 import Navbar from "@/components/Navbar";
 import PackRipCard from "@/components/PackRipCard";
 import NewsletterSignup from "@/components/NewsletterSignup";
-import { useProducts } from "@/hooks/useProducts";
+import ProductDetailDialog from "@/components/ProductDetailDialog";
+import { useProducts, type Product } from "@/hooks/useProducts";
 
 const Index = () => {
   const [showSplash, setShowSplash] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { data: products } = useProducts();
 
   useEffect(() => {
@@ -101,7 +103,7 @@ const Index = () => {
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {featured.map((product, i) => (
-                <PackRipCard key={product.id} product={product} index={i} />
+                <PackRipCard key={product.id} product={product} index={i} onViewDetail={setSelectedProduct} />
               ))}
             </div>
           </section>
@@ -117,6 +119,12 @@ const Index = () => {
           </div>
         </footer>
       </main>
+
+      <ProductDetailDialog
+        product={selectedProduct}
+        open={!!selectedProduct}
+        onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}
+      />
     </>
   );
 };
