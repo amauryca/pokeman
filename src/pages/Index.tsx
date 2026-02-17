@@ -18,7 +18,9 @@ const Index = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const featured = products?.filter((p) => p.status !== "sold" && p.quantity > 0).slice(0, 3) ?? [];
+  const featured = (products?.filter((p) => p.status !== "sold" && p.quantity > 0) ?? [])
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 3);
 
   return (
     <>
