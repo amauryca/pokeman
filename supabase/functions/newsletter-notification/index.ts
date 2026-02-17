@@ -14,20 +14,20 @@ serve(async (req) => {
   try {
     const { email } = await req.json();
 
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY is not configured");
+    const MAILEROO_API_KEY = Deno.env.get("MAILEROO_API_KEY");
+    if (!MAILEROO_API_KEY) {
+      throw new Error("MAILEROO_API_KEY is not configured");
     }
 
-    const res = await fetch("https://api.resend.com/emails", {
+    const res = await fetch("https://smtp.maileroo.com/api/v2/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "X-Api-Key": MAILEROO_API_KEY,
       },
       body: JSON.stringify({
-        from: "PokéMarket <onboarding@resend.dev>",
-        to: ["amaury2007@icloud.com"],
+        from: { address: "noreply@pokemarket.com", display_name: "PokéMarket" },
+        to: [{ address: "amaury2007@icloud.com" }],
         subject: `New Newsletter Subscriber: ${email}`,
         html: `
           <h2>New Newsletter Subscriber! 🎉</h2>
@@ -41,7 +41,7 @@ serve(async (req) => {
 
     const data = await res.json();
     if (!res.ok) {
-      console.error("Resend error:", data);
+      console.error("Maileroo error:", data);
       throw new Error(data.message || "Failed to send email");
     }
 
