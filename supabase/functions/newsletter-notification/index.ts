@@ -26,7 +26,7 @@ serve(async (req) => {
         "X-Api-Key": MAILEROO_API_KEY,
       },
       body: JSON.stringify({
-        from: { address: "noreply@pokemarket.com", display_name: "PokéMarket" },
+        from: { address: "noreply@a1b60fff033b8428.maileroo.org", display_name: "PokéMarket" },
         to: [{ address: "amaury2007@icloud.com" }],
         subject: `New Newsletter Subscriber: ${email}`,
         html: `
