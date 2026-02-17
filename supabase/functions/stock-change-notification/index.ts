@@ -99,32 +99,40 @@ serve(async (req) => {
 
     const isUpload = type === "bulk_upload";
     const isNewProduct = type === "new_product";
+    const isPriceUpdate = type === "price_update";
     const subject = isUpload
       ? `📦 ${changes.length} New Products Added to PokéMarket`
       : isNewProduct
       ? `🆕 New Product Added — ${escapeHtml(changes[0]?.name || "PokéMarket")}`
+      : isPriceUpdate
+      ? `💰 Price Update — ${escapeHtml(changes[0]?.name || "PokéMarket")}`
       : `📊 Stock Update — PokéMarket Inventory Change`;
 
     const rows = changes
       .map(
-        (c: { name: string; price: number; quantity: number; status: string }) =>
-          `<tr>
+        (c: { name: string; price: number; quantity: number; status: string; oldPrice?: number }) => {
+          const priceChanged = c.oldPrice != null && c.oldPrice !== c.price;
+          const priceDisplay = priceChanged
+            ? `<span style="text-decoration:line-through;color:#999;">$${Number(c.oldPrice).toFixed(2)}</span> → <strong>$${Number(c.price).toFixed(2)}</strong>`
+            : `$${Number(c.price).toFixed(2)}`;
+          return `<tr>
             <td style="padding:8px;border-bottom:1px solid #eee;">${escapeHtml(c.name)}</td>
-            <td style="padding:8px;border-bottom:1px solid #eee;">$${Number(c.price).toFixed(2)}</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;">${priceDisplay}</td>
             <td style="padding:8px;border-bottom:1px solid #eee;">${c.quantity}</td>
             <td style="padding:8px;border-bottom:1px solid #eee;">
               <span style="color:${c.status === "sold" || c.quantity <= 0 ? "#dc2626" : c.quantity <= 3 ? "#f59e0b" : "#16a34a"};">
                 ${c.status === "sold" || c.quantity <= 0 ? "Sold Out" : c.quantity <= 3 ? "Low Stock" : "In Stock"}
               </span>
             </td>
-          </tr>`
+          </tr>`;
+        }
       )
       .join("");
 
     const adminHtml = `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-        <h2 style="color:#dc2626;">PokéMarket Inventory ${isNewProduct ? "New Product" : isUpload ? "Upload" : "Update"}</h2>
-        <p>${isNewProduct ? "A new product was just added:" : isUpload ? `${changes.length} new product(s) were added via Excel upload.` : "The following products had stock changes:"}</p>
+        <h2 style="color:#dc2626;">PokéMarket Inventory ${isPriceUpdate ? "Price Update" : isNewProduct ? "New Product" : isUpload ? "Upload" : "Update"}</h2>
+        <p>${isPriceUpdate ? "The following products had price changes:" : isNewProduct ? "A new product was just added:" : isUpload ? `${changes.length} new product(s) were added via Excel upload.` : "The following products had stock changes:"}</p>
         <table style="width:100%;border-collapse:collapse;margin:16px 0;">
           <thead>
             <tr style="background:#f8f8f8;">
