@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.fetch-product-image]
 verify_jwt = false
+
+[functions.newsletter-notification]
+verify_jwt = false
