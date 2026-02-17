@@ -33,6 +33,11 @@ const NewsletterSignup = () => {
     setStatus("success");
     setEmail("");
     toast({ title: "Subscribed! 🎉", description: "You'll be the first to know about new drops." });
+
+    // Send notification email (fire-and-forget)
+    supabase.functions.invoke("newsletter-notification", {
+      body: { email: trimmed },
+    }).catch(console.error);
   };
 
   return (
