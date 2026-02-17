@@ -7,6 +7,18 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function escapeHtml(str: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;',
+  };
+  return str.replace(/[&<>"'\/]/g, (char) => map[char]);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -77,7 +89,7 @@ serve(async (req) => {
       .map(
         (c: { name: string; price: number; quantity: number; status: string }) =>
           `<tr>
-            <td style="padding:8px;border-bottom:1px solid #eee;">${c.name}</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;">${escapeHtml(c.name)}</td>
             <td style="padding:8px;border-bottom:1px solid #eee;">$${Number(c.price).toFixed(2)}</td>
             <td style="padding:8px;border-bottom:1px solid #eee;">${c.quantity}</td>
             <td style="padding:8px;border-bottom:1px solid #eee;">
@@ -88,7 +100,6 @@ serve(async (req) => {
           </tr>`
       )
       .join("");
-
     const html = `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
         <h2 style="color:#dc2626;">PokéMarket Inventory ${isUpload ? "Upload" : "Update"}</h2>
