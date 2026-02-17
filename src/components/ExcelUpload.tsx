@@ -2,7 +2,6 @@ import { useState } from "react";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { Upload, FileSpreadsheet, Loader2 } from "lucide-react";
 import type { Product } from "@/hooks/useProducts";
@@ -13,20 +12,8 @@ interface ExcelProduct {
   quantity: number;
   category: string;
   description?: string;
-  autoImage: boolean;
 }
 
-async function fetchProductImage(name: string, category: string): Promise<string | null> {
-  try {
-    const { data, error } = await supabase.functions.invoke("fetch-product-image", {
-      body: { name, category },
-    });
-    if (error) return null;
-    return data?.image_url || null;
-  } catch {
-    return null;
-  }
-}
 
 interface Props {
   existingProducts: Product[];
@@ -65,7 +52,7 @@ const ExcelUpload = ({ existingProducts, onComplete }: Props) => {
             quantity: parseInt(row["Quantity"] || row["quantity"] || row["Qty"] || row["qty"] || 0),
             category: String(row["Category"] || row["category"] || "Trading Cards"),
             description: row["Description"] || row["description"] || undefined,
-            autoImage: true,
+            
           });
         }
 
@@ -96,16 +83,13 @@ const ExcelUpload = ({ existingProducts, onComplete }: Props) => {
       for (const item of preview) {
         const status = item.quantity <= 0 ? "sold" : "available";
 
-        // Try to auto-fetch image only if toggle is on
-        const imageUrl = item.autoImage ? await fetchProductImage(item.name, item.category) : null;
-
         const { error } = await supabase.from("products").insert({
           name: item.name,
           price: item.price,
           quantity: item.quantity,
           category: item.category,
           description: item.description || null,
-          image_url: imageUrl,
+          image_url: null,
           status,
         });
 
@@ -176,18 +160,6 @@ const ExcelUpload = ({ existingProducts, onComplete }: Props) => {
                   <span className="text-muted-foreground whitespace-nowrap">
                     ${p.price.toFixed(2)} · Qty: {p.quantity}
                   </span>
-                  <div className="flex items-center gap-1" title="Auto-fetch image">
-                    <span className="text-xs text-muted-foreground">Img</span>
-                    <Switch
-                      checked={p.autoImage}
-                      onCheckedChange={(checked) => {
-                        setPreview((prev) =>
-                          prev?.map((item, idx) => idx === i ? { ...item, autoImage: checked } : item) ?? null
-                        );
-                      }}
-                      className="scale-75"
-                    />
-                  </div>
                 </div>
               ))}
             </div>

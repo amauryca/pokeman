@@ -13,22 +13,9 @@ interface ParsedProduct {
   quantity: number;
   category: string;
   description?: string | null;
-  imageSearchTerm?: string;
-  autoImage: boolean;
   selected: boolean;
 }
 
-async function fetchProductImage(name: string, category: string, searchTerm?: string): Promise<string | null> {
-  try {
-    const { data, error } = await supabase.functions.invoke("fetch-product-image", {
-      body: { name, category, searchTerm },
-    });
-    if (error) return null;
-    return data?.image_url || null;
-  } catch {
-    return null;
-  }
-}
 
 interface Props {
   existingProducts: Product[];
@@ -77,8 +64,6 @@ const TxtUpload = ({ existingProducts, onComplete }: Props) => {
           quantity: parseInt(item.quantity) || 1,
           category: item.category || "Trading Cards",
           description: item.description || null,
-          imageSearchTerm: item.image_search_term || name,
-          autoImage: true,
           selected: true,
         });
       }
@@ -114,7 +99,6 @@ const TxtUpload = ({ existingProducts, onComplete }: Props) => {
       let added = 0;
       for (const item of selected) {
         const status = item.quantity <= 0 ? "sold" : "available";
-        const imageUrl = item.autoImage ? await fetchProductImage(item.name, item.category, item.imageSearchTerm) : null;
 
         const { error } = await supabase.from("products").insert({
           name: item.name,
@@ -122,7 +106,7 @@ const TxtUpload = ({ existingProducts, onComplete }: Props) => {
           quantity: item.quantity,
           category: item.category,
           description: item.description || null,
-          image_url: imageUrl,
+          image_url: null,
           status,
         });
 
@@ -141,9 +125,9 @@ const TxtUpload = ({ existingProducts, onComplete }: Props) => {
     }
   };
 
-  const toggleItem = (idx: number, field: "selected" | "autoImage", value: boolean) => {
+  const toggleItem = (idx: number, value: boolean) => {
     setPreview((prev) =>
-      prev?.map((item, i) => (i === idx ? { ...item, [field]: value } : item)) ?? null
+      prev?.map((item, i) => (i === idx ? { ...item, selected: value } : item)) ?? null
     );
   };
 
@@ -202,7 +186,7 @@ const TxtUpload = ({ existingProducts, onComplete }: Props) => {
                 <div key={i} className="flex items-center gap-2 text-sm">
                   <Switch
                     checked={p.selected}
-                    onCheckedChange={(v) => toggleItem(i, "selected", v)}
+                    onCheckedChange={(v) => toggleItem(i, v)}
                     className="scale-75"
                   />
                   <span className={`truncate flex-1 ${!p.selected ? "line-through text-muted-foreground" : ""}`}>
@@ -211,14 +195,6 @@ const TxtUpload = ({ existingProducts, onComplete }: Props) => {
                   <span className="text-muted-foreground whitespace-nowrap text-xs">
                     ${p.price.toFixed(2)} · Qty: {p.quantity} · {p.category}
                   </span>
-                  <div className="flex items-center gap-1" title="Auto-fetch image">
-                    <span className="text-xs text-muted-foreground">Img</span>
-                    <Switch
-                      checked={p.autoImage}
-                      onCheckedChange={(v) => toggleItem(i, "autoImage", v)}
-                      className="scale-75"
-                    />
-                  </div>
                 </div>
               ))}
             </div>
