@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet, FileText, X, Loader2, Save } from "lucide-react";
+import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet, FileText, X, Loader2, Save, Mail } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import MultiImageUpload from "@/components/MultiImageUpload";
 import ExcelUpload from "@/components/ExcelUpload";
@@ -54,6 +54,10 @@ const Admin = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [galleryDialogProduct, setGalleryDialogProduct] = useState<Product | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
+
+  // Track newly added products for batch notification
+  const [pendingNewProducts, setPendingNewProducts] = useState<Array<{ name: string; price: number; quantity: number; status: string }>>([]);
+  const [sendingNewArrivals, setSendingNewArrivals] = useState(false);
   
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -81,6 +85,25 @@ const Admin = () => {
     products?.forEach((p) => {
       if (hasDraft(p.id)) saveDraft(p);
     });
+  };
+
+  const sendNewArrivalsEmail = async () => {
+    if (pendingNewProducts.length === 0) return;
+    setSendingNewArrivals(true);
+    try {
+      await supabase.functions.invoke("stock-change-notification", {
+        body: {
+          changes: pendingNewProducts,
+          type: pendingNewProducts.length === 1 ? "new_product" : "bulk_upload",
+        },
+      });
+      toast({ title: `New arrivals email sent for ${pendingNewProducts.length} product(s)!` });
+      setPendingNewProducts([]);
+    } catch {
+      toast({ title: "Failed to send email", variant: "destructive" });
+    } finally {
+      setSendingNewArrivals(false);
+    }
   };
 
   // Auth + admin role check
@@ -153,13 +176,11 @@ const Admin = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      // Send notification for new product
-      supabase.functions.invoke("stock-change-notification", {
-        body: {
-          changes: [{ name: newName, price: parseFloat(newPrice), quantity: parseInt(newQty), status: newStatus }],
-          type: "new_product",
-        },
-      }).catch(() => {});
+      // Track for batch notification instead of sending immediately
+      setPendingNewProducts((prev) => [
+        ...prev,
+        { name: newName, price: parseFloat(newPrice), quantity: parseInt(newQty), status: newStatus },
+      ]);
       setNewName(""); setNewPrice(""); setNewQty(""); setNewImageUrl(null); setNewDescription(""); setNewGalleryImages([]); setNewStatus("available");
       setDialogOpen(false);
       toast({ title: "Product added!" });
@@ -347,6 +368,7 @@ const Admin = () => {
                     <ExcelUpload
                       existingProducts={products ?? []}
                       onComplete={() => queryClient.invalidateQueries({ queryKey: ["products"] })}
+                      onProductsAdded={(items) => setPendingNewProducts((prev) => [...prev, ...items])}
                     />
                   </DialogContent>
                 </Dialog>
@@ -370,6 +392,12 @@ const Admin = () => {
                 {hasPendingDrafts && (
                   <Button size="sm" onClick={saveAllDrafts} className="gap-1">
                     <Save className="h-4 w-4" /> Save All
+                  </Button>
+                )}
+                {pendingNewProducts.length > 0 && (
+                  <Button size="sm" variant="outline" onClick={sendNewArrivalsEmail} disabled={sendingNewArrivals} className="gap-1">
+                    {sendingNewArrivals ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                    Send New Arrivals ({pendingNewProducts.length})
                   </Button>
                 )}
               </div>

@@ -149,10 +149,10 @@ serve(async (req) => {
       </div>
     `;
 
-    // Skip admin email — only notify subscribers for new products/uploads
+    // Skip admin email — only notify subscribers
 
-    // For new products or bulk uploads, also notify newsletter subscribers
-    if (isNewProduct || isUpload) {
+    // Notify newsletter subscribers for new products, uploads, and price updates
+    if (isNewProduct || isUpload || isPriceUpdate) {
       // Use service role to read subscribers
       const serviceSupabase = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
@@ -165,32 +165,66 @@ serve(async (req) => {
         .eq("is_active", true);
 
       if (subscribers && subscribers.length > 0) {
-        const productNames = changes.map((c: { name: string }) => escapeHtml(c.name));
-        const subscriberSubject = isUpload
-          ? `🆕 ${changes.length} New Products Just Dropped on PokéMarket!`
-          : `🆕 New Drop: ${escapeHtml(changes[0]?.name || "Check it out!")}`;
+        let subscriberSubject: string;
+        let subscriberHtml: string;
 
-        const productList = changes
-          .map(
-            (c: { name: string; price: number }) =>
-              `<li style="margin-bottom:8px;"><strong>${escapeHtml(c.name)}</strong> — $${Number(c.price).toFixed(2)}</li>`
-          )
-          .join("");
+        if (isPriceUpdate) {
+          const productList = changes
+            .map(
+              (c: { name: string; price: number; oldPrice?: number }) => {
+                const priceStr = c.oldPrice != null && c.oldPrice !== c.price
+                  ? `<span style="text-decoration:line-through;color:#999;">$${Number(c.oldPrice).toFixed(2)}</span> → <strong>$${Number(c.price).toFixed(2)}</strong>`
+                  : `$${Number(c.price).toFixed(2)}`;
+                return `<li style="margin-bottom:8px;"><strong>${escapeHtml(c.name)}</strong> — ${priceStr}</li>`;
+              }
+            )
+            .join("");
 
-        const subscriberHtml = `
-          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-            <h2 style="color:#dc2626;">New Drop Alert! 🔥</h2>
-            <p>Hey! New Pokémon products just landed on PokéMarket:</p>
-            <ul style="padding-left:20px;">${productList}</ul>
-            <p style="margin-top:16px;">
-              <a href="https://pokeman.lovable.app/products" style="display:inline-block;padding:12px 24px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">
-                Shop Now →
-              </a>
-            </p>
-            <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
-            <p style="color:#888;font-size:12px;"><em>You're receiving this because you subscribed to PokéMarket updates.</em></p>
-          </div>
-        `;
+          subscriberSubject = changes.length === 1
+            ? `💰 Price Update: ${escapeHtml(changes[0]?.name || "PokéMarket")}`
+            : `💰 Price Updates on PokéMarket`;
+
+          subscriberHtml = `
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+              <h2 style="color:#dc2626;">Price Update! 💰</h2>
+              <p>Heads up — prices just changed on these items:</p>
+              <ul style="padding-left:20px;">${productList}</ul>
+              <p style="margin-top:16px;">
+                <a href="https://pokeman.lovable.app/products" style="display:inline-block;padding:12px 24px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">
+                  Shop Now →
+                </a>
+              </p>
+              <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
+              <p style="color:#888;font-size:12px;"><em>You're receiving this because you subscribed to PokéMarket updates.</em></p>
+            </div>
+          `;
+        } else {
+          subscriberSubject = isUpload
+            ? `🆕 ${changes.length} New Products Just Dropped on PokéMarket!`
+            : `🆕 New Drop: ${escapeHtml(changes[0]?.name || "Check it out!")}`;
+
+          const productList = changes
+            .map(
+              (c: { name: string; price: number }) =>
+                `<li style="margin-bottom:8px;"><strong>${escapeHtml(c.name)}</strong> — $${Number(c.price).toFixed(2)}</li>`
+            )
+            .join("");
+
+          subscriberHtml = `
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+              <h2 style="color:#dc2626;">New Drop Alert! 🔥</h2>
+              <p>Hey! New Pokémon products just landed on PokéMarket:</p>
+              <ul style="padding-left:20px;">${productList}</ul>
+              <p style="margin-top:16px;">
+                <a href="https://pokeman.lovable.app/products" style="display:inline-block;padding:12px 24px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">
+                  Shop Now →
+                </a>
+              </p>
+              <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
+              <p style="color:#888;font-size:12px;"><em>You're receiving this because you subscribed to PokéMarket updates.</em></p>
+            </div>
+          `;
+        }
 
         // Send to each subscriber (fire-and-forget, don't block on failures)
         const emailPromises = subscribers.map((sub) =>
