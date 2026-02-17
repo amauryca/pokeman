@@ -50,6 +50,7 @@ const Admin = () => {
   const [newDescription, setNewDescription] = useState("");
   const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
   const [newGalleryImages, setNewGalleryImages] = useState<string[]>([]);
+  const [newStatus, setNewStatus] = useState<string>("available");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [galleryDialogProduct, setGalleryDialogProduct] = useState<Product | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
@@ -123,6 +124,7 @@ const Admin = () => {
         price: parseFloat(newPrice),
         quantity: parseInt(newQty),
         category: newCategory,
+        status: newStatus,
         description: newDescription || null,
         image_url: imageUrl,
       }).select().single();
@@ -136,7 +138,7 @@ const Admin = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      setNewName(""); setNewPrice(""); setNewQty(""); setNewImageUrl(null); setNewDescription(""); setNewGalleryImages([]);
+      setNewName(""); setNewPrice(""); setNewQty(""); setNewImageUrl(null); setNewDescription(""); setNewGalleryImages([]); setNewStatus("available");
       setDialogOpen(false);
       toast({ title: "Product added!" });
     },
@@ -305,6 +307,17 @@ const Admin = () => {
                       </SelectContent>
                     </Select>
                     <div>
+                      <p className="text-sm font-medium mb-1">Status</p>
+                      <Select value={newStatus} onValueChange={setNewStatus}>
+                        <SelectTrigger className="w-full h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="available">Available</SelectItem>
+                          <SelectItem value="occur">Coming Soon</SelectItem>
+                          <SelectItem value="sold">Sold Out</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
                       <p className="text-sm font-medium mb-1">Main Image</p>
                       <ImageUpload value={newImageUrl} onChange={setNewImageUrl} />
                     </div>
@@ -378,7 +391,7 @@ const Admin = () => {
                       <TableHead>Category</TableHead>
                       <TableHead>Price</TableHead>
                       <TableHead>Qty</TableHead>
-                      <TableHead>Sold</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -467,12 +480,19 @@ const Admin = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Switch
-                            checked={p.status === "sold"}
-                            onCheckedChange={(checked) =>
-                              updateProduct.mutate({ id: p.id, status: checked ? "sold" : "available" })
-                            }
-                          />
+                          <Select
+                            value={p.status ?? "available"}
+                            onValueChange={(val) => updateProduct.mutate({ id: p.id, status: val })}
+                          >
+                            <SelectTrigger className="w-36 h-8 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="available">Available</SelectItem>
+                              <SelectItem value="occur">Coming Soon</SelectItem>
+                              <SelectItem value="sold">Sold Out</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
@@ -573,13 +593,14 @@ const Admin = () => {
                         </Button>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-muted-foreground">Sold</span>
-                        <Switch
-                          checked={p.status === "sold"}
-                          onCheckedChange={(checked) =>
-                            updateProduct.mutate({ id: p.id, status: checked ? "sold" : "available" })
-                          }
-                        />
+                        <Select value={p.status ?? "available"} onValueChange={(val) => updateProduct.mutate({ id: p.id, status: val })}>
+                          <SelectTrigger className="w-32 h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="available">Available</SelectItem>
+                            <SelectItem value="occur">Coming Soon</SelectItem>
+                            <SelectItem value="sold">Sold Out</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </div>

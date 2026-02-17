@@ -39,7 +39,6 @@
     --pokemon-blue: 215 80% 50%;
     --pokemon-yellow: 45 93% 58%;
     --pokemon-occur: 50 95% 85%;
-    --pokemon-occur: 50 95% 45%;
     --pokemon-red: 0 72% 51%;
 
     --sidebar-background: 0 0% 98%;
@@ -73,6 +72,8 @@
 
     --accent: 45 93% 58%;
     --accent-foreground: 220 20% 10%;
+
+    --pokemon-occur: 50 95% 45%;
 
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 95%;
