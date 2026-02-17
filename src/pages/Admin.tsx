@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet, FileText, X, Wand2, Loader2, Save } from "lucide-react";
+import { Plus, Minus, Trash2, LogOut, Package, ClipboardList, ImagePlus, Images, FileSpreadsheet, FileText, X, Loader2, Save } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import MultiImageUpload from "@/components/MultiImageUpload";
 import ExcelUpload from "@/components/ExcelUpload";
@@ -54,7 +54,7 @@ const Admin = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [galleryDialogProduct, setGalleryDialogProduct] = useState<Product | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
-  const [fetchingImages, setFetchingImages] = useState(false);
+  
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   // Draft state: tracks unsaved edits per product id
@@ -134,17 +134,6 @@ const Admin = () => {
   // Mutations
   const addProduct = useMutation({
     mutationFn: async () => {
-      // Auto-fetch image if none provided
-      let imageUrl = newImageUrl;
-      if (!imageUrl && newName) {
-        try {
-          const { data: imgData } = await supabase.functions.invoke("fetch-product-image", {
-            body: { name: newName, category: newCategory },
-          });
-          imageUrl = imgData?.image_url || null;
-        } catch { /* best effort */ }
-      }
-
       const { data, error } = await supabase.from("products").insert({
         name: newName,
         price: parseFloat(newPrice),
@@ -152,7 +141,7 @@ const Admin = () => {
         category: newCategory,
         status: newStatus,
         description: newDescription || null,
-        image_url: imageUrl,
+        image_url: newImageUrl,
       }).select().single();
       if (error) throw error;
       if (newGalleryImages.length > 0) {
@@ -247,29 +236,6 @@ const Admin = () => {
     navigate("/admin/login");
   };
 
-  const handleFetchMissingImages = async () => {
-    const missing = products?.filter(p => !p.image_url) ?? [];
-    if (missing.length === 0) {
-      toast({ title: "All products already have images!" });
-      return;
-    }
-    setFetchingImages(true);
-    let updated = 0;
-    for (const p of missing) {
-      try {
-        const { data } = await supabase.functions.invoke("fetch-product-image", {
-          body: { name: p.name, category: p.category },
-        });
-        if (data?.image_url) {
-          await supabase.from("products").update({ image_url: data.image_url }).eq("id", p.id);
-          updated++;
-        }
-      } catch { /* best effort */ }
-    }
-    queryClient.invalidateQueries({ queryKey: ["products"] });
-    toast({ title: `Fetched images for ${updated} of ${missing.length} product(s)` });
-    setFetchingImages(false);
-  };
 
   if (!isAuthorized) {
     return (
@@ -399,18 +365,6 @@ const Admin = () => {
                     />
                   </DialogContent>
                 </Dialog>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleFetchMissingImages}
-                  disabled={fetchingImages || !products?.some(p => !p.image_url)}
-                >
-                  {fetchingImages ? (
-                    <><Loader2 className="h-4 w-4 sm:mr-1 animate-spin" /> <span className="hidden sm:inline">Fetching...</span></>
-                  ) : (
-                    <><Wand2 className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Fetch Images</span></>
-                  )}
-                </Button>
                 {hasPendingDrafts && (
                   <Button size="sm" onClick={saveAllDrafts} className="gap-1">
                     <Save className="h-4 w-4" /> Save All
