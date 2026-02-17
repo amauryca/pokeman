@@ -468,7 +468,18 @@ const Admin = () => {
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
-                            <span className="w-8 text-center text-sm">{p.quantity}</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={p.quantity}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val >= 0) {
+                                  updateProduct.mutate({ id: p.id, quantity: val });
+                                }
+                              }}
+                              className="w-16 h-7 text-center text-sm px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
                             <Button
                               variant="outline"
                               size="icon"
