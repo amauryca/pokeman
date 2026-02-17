@@ -98,17 +98,24 @@ serve(async (req) => {
     }
 
     const isUpload = type === "bulk_upload";
+    // Filter out "coming soon" items — only notify for available products
+    const availableChanges = changes.filter((c: { status?: string }) => c.status !== "occur");
+    if (availableChanges.length === 0) {
+      return new Response(JSON.stringify({ success: true, skipped: "all items coming soon" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const isNewProduct = type === "new_product";
     const isPriceUpdate = type === "price_update";
     const subject = isUpload
-      ? `📦 ${changes.length} New Products Added to PokéMarket`
+      ? `📦 ${availableChanges.length} New Products Added to PokéMarket`
       : isNewProduct
-      ? `🆕 New Product Added — ${escapeHtml(changes[0]?.name || "PokéMarket")}`
+      ? `🆕 New Product Added — ${escapeHtml(availableChanges[0]?.name || "PokéMarket")}`
       : isPriceUpdate
-      ? `💰 Price Update — ${escapeHtml(changes[0]?.name || "PokéMarket")}`
+      ? `💰 Price Update — ${escapeHtml(availableChanges[0]?.name || "PokéMarket")}`
       : `📊 Stock Update — PokéMarket Inventory Change`;
 
-    const rows = changes
+    const rows = availableChanges
       .map(
         (c: { name: string; price: number; quantity: number; status: string; oldPrice?: number }) => {
           const priceChanged = c.oldPrice != null && c.oldPrice !== c.price;
@@ -132,7 +139,7 @@ serve(async (req) => {
     const adminHtml = `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
         <h2 style="color:#dc2626;">PokéMarket Inventory ${isPriceUpdate ? "Price Update" : isNewProduct ? "New Product" : isUpload ? "Upload" : "Update"}</h2>
-        <p>${isPriceUpdate ? "The following products had price changes:" : isNewProduct ? "A new product was just added:" : isUpload ? `${changes.length} new product(s) were added via Excel upload.` : "The following products had stock changes:"}</p>
+        <p>${isPriceUpdate ? "The following products had price changes:" : isNewProduct ? "A new product was just added:" : isUpload ? `${availableChanges.length} new product(s) were added via Excel upload.` : "The following products had stock changes:"}</p>
         <table style="width:100%;border-collapse:collapse;margin:16px 0;">
           <thead>
             <tr style="background:#f8f8f8;">
@@ -169,7 +176,7 @@ serve(async (req) => {
         let subscriberHtml: string;
 
         if (isPriceUpdate) {
-          const productList = changes
+          const productList = availableChanges
             .map(
               (c: { name: string; price: number; oldPrice?: number }) => {
                 const priceStr = c.oldPrice != null && c.oldPrice !== c.price
@@ -180,8 +187,8 @@ serve(async (req) => {
             )
             .join("");
 
-          subscriberSubject = changes.length === 1
-            ? `💰 Price Update: ${escapeHtml(changes[0]?.name || "PokéMarket")}`
+          subscriberSubject = availableChanges.length === 1
+            ? `💰 Price Update: ${escapeHtml(availableChanges[0]?.name || "PokéMarket")}`
             : `💰 Price Updates on PokéMarket`;
 
           subscriberHtml = `
@@ -200,10 +207,10 @@ serve(async (req) => {
           `;
         } else {
           subscriberSubject = isUpload
-            ? `🆕 ${changes.length} New Products Just Dropped on PokéMarket!`
-            : `🆕 New Drop: ${escapeHtml(changes[0]?.name || "Check it out!")}`;
+            ? `🆕 ${availableChanges.length} New Products Just Dropped on PokéMarket!`
+            : `🆕 New Drop: ${escapeHtml(availableChanges[0]?.name || "Check it out!")}`;
 
-          const productList = changes
+          const productList = availableChanges
             .map(
               (c: { name: string; price: number }) =>
                 `<li style="margin-bottom:8px;"><strong>${escapeHtml(c.name)}</strong> — $${Number(c.price).toFixed(2)}</li>`
