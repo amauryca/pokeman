@@ -55,7 +55,7 @@ const Index = () => {
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="border-foreground bg-foreground !text-background hover:bg-primary hover:border-primary hover:!text-primary-foreground">
-                  <Link to="/order">Contact Me</Link>
+                  <a href="mailto:amaurycacevedo@gmail.com">Contact Me</a>
                 </Button>
               </div>
             </motion.div>
