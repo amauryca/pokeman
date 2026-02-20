@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { ShoppingBag, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,9 +35,15 @@ const Navbar = () => {
               {l.label}
             </Link>
           ))}
-          <Button asChild size="sm">
-            <a href="mailto:amaurycacevedo@gmail.com">Contact Me</a>
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button size="sm">Contact Me</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto text-sm space-y-1">
+              <p>📧 Email me: amaurycacevedo@gmail.com</p>
+              <p>📱 Text me: 941-320-9859</p>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Mobile toggle */}
@@ -58,9 +65,10 @@ const Navbar = () => {
               {l.label}
             </Link>
           ))}
-          <Button asChild size="sm" className="w-full">
-            <a href="mailto:amaurycacevedo@gmail.com" onClick={() => setMobileOpen(false)}>Contact Me</a>
-          </Button>
+          <div className="text-sm text-muted-foreground space-y-1 pt-2 border-t">
+            <p>📧 Email me: amaurycacevedo@gmail.com</p>
+            <p>📱 Text me: 941-320-9859</p>
+          </div>
         </div>
       )}
     </nav>
