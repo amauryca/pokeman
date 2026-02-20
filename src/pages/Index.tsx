@@ -54,9 +54,10 @@ const Index = () => {
                     Browse Products <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="border-foreground bg-foreground !text-background hover:bg-primary hover:border-primary hover:!text-primary-foreground">
-                  <a href="mailto:amaurycacevedo@gmail.com">Contact Me</a>
-                </Button>
+                <div className="text-sm text-primary-foreground/80 space-y-1 border border-primary-foreground/20 rounded-lg px-4 py-3">
+                  <p>📧 Email me: amaurycacevedo@gmail.com</p>
+                  <p>📱 Text me: 941-320-9859</p>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -116,11 +117,7 @@ const Index = () => {
         <footer className="border-t bg-muted/30 py-8">
           <div className="container text-center text-sm text-muted-foreground space-y-1">
             <p>&copy; {new Date().getFullYear()} PokéMarket. Built with ❤️ for Pokémon fans.</p>
-            <p>
-              <a href="tel:9413209859" className="hover:text-foreground transition-colors">941-320-9859</a>
-              {" | "}
-              <a href="mailto:amaurycacevedo@gmail.com" className="hover:text-foreground transition-colors">amaurycacevedo@gmail.com</a>
-            </p>
+            <p>📧 amaurycacevedo@gmail.com | 📱 941-320-9859</p>
           </div>
         </footer>
       </main>
