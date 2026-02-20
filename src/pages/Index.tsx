@@ -114,8 +114,13 @@ const Index = () => {
 
         {/* Footer */}
         <footer className="border-t bg-muted/30 py-8">
-          <div className="container text-center text-sm text-muted-foreground">
+          <div className="container text-center text-sm text-muted-foreground space-y-1">
             <p>&copy; {new Date().getFullYear()} PokéMarket. Built with ❤️ for Pokémon fans.</p>
+            <p>
+              <a href="tel:9413209859" className="hover:text-foreground transition-colors">941-320-9859</a>
+              {" | "}
+              <a href="mailto:amaurycacevedo@gmail.com" className="hover:text-foreground transition-colors">amaurycacevedo@gmail.com</a>
+            </p>
           </div>
         </footer>
       </main>
