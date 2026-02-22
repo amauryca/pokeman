@@ -55,8 +55,7 @@ const Index = () => {
                   </Link>
                 </Button>
                 <div className="text-sm text-primary-foreground/80 space-y-1 border border-primary-foreground/20 rounded-lg px-4 py-3">
-                  <p>📧 Email me: amaurycacevedo@gmail.com</p>
-                  <p>📱 Text me: 941-320-9859</p>
+                  <p>📧 Email me: migrationstation5@gmail.com</p>
                 </div>
               </div>
             </motion.div>
@@ -117,7 +116,7 @@ const Index = () => {
         <footer className="border-t bg-muted/30 py-8">
           <div className="container text-center text-sm text-muted-foreground space-y-1">
             <p>&copy; {new Date().getFullYear()} PokéMarket. Built with ❤️ for Pokémon fans.</p>
-            <p>📧 amaurycacevedo@gmail.com | 📱 941-320-9859</p>
+            <p>📧 migrationstation5@gmail.com</p>
           </div>
         </footer>
       </main>

@@ -40,8 +40,7 @@ const Navbar = () => {
               <Button size="sm">Contact Me</Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto text-sm space-y-1">
-              <p>📧 Email me: amaurycacevedo@gmail.com</p>
-              <p>📱 Text me: 941-320-9859</p>
+              <p>📧 Email me: migrationstation5@gmail.com</p>
             </PopoverContent>
           </Popover>
         </div>
@@ -66,8 +65,7 @@ const Navbar = () => {
             </Link>
           ))}
           <div className="text-sm text-muted-foreground space-y-1 pt-2 border-t">
-            <p>📧 Email me: amaurycacevedo@gmail.com</p>
-            <p>📱 Text me: 941-320-9859</p>
+            <p>📧 Email me: migrationstation5@gmail.com</p>
           </div>
         </div>
       )}
